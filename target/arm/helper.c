@@ -2828,29 +2828,34 @@ static void gt_ctl_write(CPUARMState *env, const ARMCPRegInfo *ri,
 
 static void gt_phys_timer_reset(CPUARMState *env, const ARMCPRegInfo *ri)
 {
+    printf("%s pc=%#llx\n", __func__, env->pc);
     gt_timer_reset(env, ri, GTIMER_PHYS);
 }
 
 static void gt_phys_cval_write(CPUARMState *env, const ARMCPRegInfo *ri,
                                uint64_t value)
 {
+    printf("%s val=%#llx pc=%#llx\n", __func__, value, env->pc);
     gt_cval_write(env, ri, GTIMER_PHYS, value);
 }
 
 static uint64_t gt_phys_tval_read(CPUARMState *env, const ARMCPRegInfo *ri)
 {
+    printf("%s pc=%#llx\n", __func__, env->pc);
     return gt_tval_read(env, ri, GTIMER_PHYS);
 }
 
 static void gt_phys_tval_write(CPUARMState *env, const ARMCPRegInfo *ri,
                                uint64_t value)
 {
+    printf("%s val=%#llx pc=%#llx\n", __func__, value, env->pc);
     gt_tval_write(env, ri, GTIMER_PHYS, value);
 }
 
 static void gt_phys_ctl_write(CPUARMState *env, const ARMCPRegInfo *ri,
                               uint64_t value)
 {
+    printf("%s val=%#llx pc=%#llx\n", __func__, value, env->pc);
     gt_ctl_write(env, ri, GTIMER_PHYS, value);
 }
 
@@ -2882,6 +2887,7 @@ static uint64_t gt_phys_redir_cval_read(CPUARMState *env,
                                         const ARMCPRegInfo *ri)
 {
     int timeridx = gt_phys_redir_timeridx(env);
+    printf("%s pc=%#llx\n", __func__, env->pc);
     return env->cp15.c14_timer[timeridx].cval;
 }
 
@@ -2889,6 +2895,7 @@ static void gt_phys_redir_cval_write(CPUARMState *env, const ARMCPRegInfo *ri,
                                      uint64_t value)
 {
     int timeridx = gt_phys_redir_timeridx(env);
+    printf("%s val=%#llx pc=%#llx\n", __func__, value, env->pc);
     gt_cval_write(env, ri, timeridx, value);
 }
 
@@ -2896,6 +2903,7 @@ static uint64_t gt_phys_redir_tval_read(CPUARMState *env,
                                         const ARMCPRegInfo *ri)
 {
     int timeridx = gt_phys_redir_timeridx(env);
+    printf("%s pc=%#llx\n", __func__, env->pc);
     return gt_tval_read(env, ri, timeridx);
 }
 
@@ -2903,6 +2911,7 @@ static void gt_phys_redir_tval_write(CPUARMState *env, const ARMCPRegInfo *ri,
                                      uint64_t value)
 {
     int timeridx = gt_phys_redir_timeridx(env);
+    printf("%s val=%#llx pc=%#llx\n", __func__, value, env->pc);
     gt_tval_write(env, ri, timeridx, value);
 }
 
@@ -2910,6 +2919,7 @@ static uint64_t gt_phys_redir_ctl_read(CPUARMState *env,
                                        const ARMCPRegInfo *ri)
 {
     int timeridx = gt_phys_redir_timeridx(env);
+    printf("%s pc=%#llx\n", __func__, env->pc);
     return env->cp15.c14_timer[timeridx].ctl;
 }
 
@@ -2917,34 +2927,40 @@ static void gt_phys_redir_ctl_write(CPUARMState *env, const ARMCPRegInfo *ri,
                                     uint64_t value)
 {
     int timeridx = gt_phys_redir_timeridx(env);
+    printf("%s val=%#llx pc=%#llx\n", __func__, value, env->pc);
     gt_ctl_write(env, ri, timeridx, value);
 }
 
 static void gt_virt_timer_reset(CPUARMState *env, const ARMCPRegInfo *ri)
 {
+    printf("%s pc=%#llx\n", __func__, env->pc);
     gt_timer_reset(env, ri, GTIMER_VIRT);
 }
 
 static void gt_virt_cval_write(CPUARMState *env, const ARMCPRegInfo *ri,
                                uint64_t value)
 {
+    printf("%s val=%#llx pc=%#llx\n", __func__, value, env->pc);
     gt_cval_write(env, ri, GTIMER_VIRT, value);
 }
 
 static uint64_t gt_virt_tval_read(CPUARMState *env, const ARMCPRegInfo *ri)
 {
+    printf("%s pc=%#llx\n", __func__, env->pc);
     return gt_tval_read(env, ri, GTIMER_VIRT);
 }
 
 static void gt_virt_tval_write(CPUARMState *env, const ARMCPRegInfo *ri,
                                uint64_t value)
 {
+    printf("%s val=%#llx pc=%#llx\n", __func__, value, env->pc);
     gt_tval_write(env, ri, GTIMER_VIRT, value);
 }
 
 static void gt_virt_ctl_write(CPUARMState *env, const ARMCPRegInfo *ri,
                               uint64_t value)
 {
+    printf("%s val=%#llx pc=%#llx\n", __func__, value, env->pc);
     gt_ctl_write(env, ri, GTIMER_VIRT, value);
 }
 
@@ -2953,6 +2969,7 @@ static void gt_cntvoff_write(CPUARMState *env, const ARMCPRegInfo *ri,
 {
     ARMCPU *cpu = env_archcpu(env);
 
+    printf("%s val=%#llx pc=%#llx\n", __func__, value, env->pc);
     trace_arm_gt_cntvoff_write(value);
     raw_write(env, ri, value);
     gt_recalc_timer(cpu, GTIMER_VIRT);
@@ -2962,6 +2979,7 @@ static uint64_t gt_virt_redir_cval_read(CPUARMState *env,
                                         const ARMCPRegInfo *ri)
 {
     int timeridx = gt_virt_redir_timeridx(env);
+    printf("%s pc=%#llx\n", __func__, env->pc);
     return env->cp15.c14_timer[timeridx].cval;
 }
 
@@ -2969,6 +2987,7 @@ static void gt_virt_redir_cval_write(CPUARMState *env, const ARMCPRegInfo *ri,
                                      uint64_t value)
 {
     int timeridx = gt_virt_redir_timeridx(env);
+    printf("%s val=%#llx pc=%#llx\n", __func__, value, env->pc);
     gt_cval_write(env, ri, timeridx, value);
 }
 
@@ -2976,6 +2995,7 @@ static uint64_t gt_virt_redir_tval_read(CPUARMState *env,
                                         const ARMCPRegInfo *ri)
 {
     int timeridx = gt_virt_redir_timeridx(env);
+    printf("%s pc=%#llx\n", __func__, env->pc);
     return gt_tval_read(env, ri, timeridx);
 }
 
@@ -2983,6 +3003,7 @@ static void gt_virt_redir_tval_write(CPUARMState *env, const ARMCPRegInfo *ri,
                                      uint64_t value)
 {
     int timeridx = gt_virt_redir_timeridx(env);
+    printf("%s val=%#llx pc=%#llx\n", __func__, value, env->pc);
     gt_tval_write(env, ri, timeridx, value);
 }
 
@@ -2990,6 +3011,7 @@ static uint64_t gt_virt_redir_ctl_read(CPUARMState *env,
                                        const ARMCPRegInfo *ri)
 {
     int timeridx = gt_virt_redir_timeridx(env);
+    printf("%s pc=%#llx\n", __func__, env->pc);
     return env->cp15.c14_timer[timeridx].ctl;
 }
 
@@ -2997,90 +3019,106 @@ static void gt_virt_redir_ctl_write(CPUARMState *env, const ARMCPRegInfo *ri,
                                     uint64_t value)
 {
     int timeridx = gt_virt_redir_timeridx(env);
+    printf("%s val=%#llx pc=%#llx\n", __func__, value, env->pc);
     gt_ctl_write(env, ri, timeridx, value);
 }
 
 static void gt_hyp_timer_reset(CPUARMState *env, const ARMCPRegInfo *ri)
 {
+    printf("%s pc=%#llx\n", __func__, env->pc);
     gt_timer_reset(env, ri, GTIMER_HYP);
 }
 
 static void gt_hyp_cval_write(CPUARMState *env, const ARMCPRegInfo *ri,
                               uint64_t value)
 {
+    printf("%s val=%#llx pc=%#llx\n", __func__, value, env->pc);
     gt_cval_write(env, ri, GTIMER_HYP, value);
 }
 
 static uint64_t gt_hyp_tval_read(CPUARMState *env, const ARMCPRegInfo *ri)
 {
+    printf("%s pc=%#llx\n", __func__, env->pc);
     return gt_tval_read(env, ri, GTIMER_HYP);
 }
 
 static void gt_hyp_tval_write(CPUARMState *env, const ARMCPRegInfo *ri,
                               uint64_t value)
 {
+    printf("%s val=%#llx pc=%#llx\n", __func__, value, env->pc);
     gt_tval_write(env, ri, GTIMER_HYP, value);
 }
 
 static void gt_hyp_ctl_write(CPUARMState *env, const ARMCPRegInfo *ri,
                               uint64_t value)
 {
+    printf("%s val=%#llx pc=%#llx\n", __func__, value, env->pc);
     gt_ctl_write(env, ri, GTIMER_HYP, value);
 }
 
 static void gt_sec_timer_reset(CPUARMState *env, const ARMCPRegInfo *ri)
 {
+    printf("%s pc=%#llx\n", __func__, env->pc);
     gt_timer_reset(env, ri, GTIMER_SEC);
 }
 
 static void gt_sec_cval_write(CPUARMState *env, const ARMCPRegInfo *ri,
                               uint64_t value)
 {
+    printf("%s val=%#llx pc=%#llx\n", __func__, value, env->pc);
     gt_cval_write(env, ri, GTIMER_SEC, value);
 }
 
 static uint64_t gt_sec_tval_read(CPUARMState *env, const ARMCPRegInfo *ri)
 {
+    printf("%s pc=%#llx\n", __func__, env->pc);
     return gt_tval_read(env, ri, GTIMER_SEC);
 }
 
 static void gt_sec_tval_write(CPUARMState *env, const ARMCPRegInfo *ri,
                               uint64_t value)
 {
+    printf("%s val=%#llx pc=%#llx\n", __func__, value, env->pc);
     gt_tval_write(env, ri, GTIMER_SEC, value);
 }
 
 static void gt_sec_ctl_write(CPUARMState *env, const ARMCPRegInfo *ri,
                               uint64_t value)
 {
+    printf("%s val=%#llx pc=%#llx\n", __func__, value, env->pc);
     gt_ctl_write(env, ri, GTIMER_SEC, value);
 }
 
 static void gt_hv_timer_reset(CPUARMState *env, const ARMCPRegInfo *ri)
 {
+    printf("%s pc=%#llx\n", __func__, env->pc);
     gt_timer_reset(env, ri, GTIMER_HYPVIRT);
 }
 
 static void gt_hv_cval_write(CPUARMState *env, const ARMCPRegInfo *ri,
                              uint64_t value)
 {
+    printf("%s val=%#llx pc=%#llx\n", __func__, value, env->pc);
     gt_cval_write(env, ri, GTIMER_HYPVIRT, value);
 }
 
 static uint64_t gt_hv_tval_read(CPUARMState *env, const ARMCPRegInfo *ri)
 {
+    printf("%s pc=%#llx\n", __func__, env->pc);
     return gt_tval_read(env, ri, GTIMER_HYPVIRT);
 }
 
 static void gt_hv_tval_write(CPUARMState *env, const ARMCPRegInfo *ri,
                              uint64_t value)
 {
+    printf("%s val=%#llx pc=%#llx\n", __func__, value, env->pc);
     gt_tval_write(env, ri, GTIMER_HYPVIRT, value);
 }
 
 static void gt_hv_ctl_write(CPUARMState *env, const ARMCPRegInfo *ri,
                             uint64_t value)
 {
+    printf("%s val=%#llx pc=%#llx\n", __func__, value, env->pc);
     gt_ctl_write(env, ri, GTIMER_HYPVIRT, value);
 }
 
@@ -3123,6 +3161,7 @@ static void arm_gt_cntfrq_reset(CPUARMState *env, const ARMCPRegInfo *opaque)
 {
     ARMCPU *cpu = env_archcpu(env);
 
+    printf("%s pc=%#llx\n", __func__, env->pc);
     cpu->env.cp15.c14_cntfrq = cpu->gt_cntfrq_hz;
 }
 
@@ -5127,6 +5166,257 @@ static const ARMCPRegInfo v8_cp_reginfo[] = {
       .access = PL1_RW, .accessfn = access_trap_aa32s_el1,
       .writefn = sdcr_write,
       .fieldoffset = offsetoflow32(CPUARMState, cp15.mdcr_el3) },
+    // https://github.com/zhuowei/qemu/commit/4762568cf6540706370025745fc8a80a3bdc1da4
+    // zhuowei: hack: KTRR for Apple CPUs
+    { .name = "KTRR_MYSTERY0_EL1", .state = ARM_CP_STATE_AA64,
+      .opc0 = 3, .opc1 = 4, .crn = 15, .crm = 2, .opc2 = 0,
+      .resetvalue = 0,
+      .access = PL1_RW, .fieldoffset = offsetof(CPUARMState, cp15.ktrr_mystery0_el1) },
+    { .name = "KTRR_MYSTERY1_EL1", .state = ARM_CP_STATE_AA64,
+      .opc0 = 3, .opc1 = 4, .crn = 15, .crm = 2, .opc2 = 1,
+      .resetvalue = 0,
+      .access = PL1_RW, .fieldoffset = offsetof(CPUARMState, cp15.ktrr_mystery1_el1) },
+    { .name = "KTRR_LOCK_EL1", .state = ARM_CP_STATE_AA64,
+      .opc0 = 3, .opc1 = 4, .crn = 15, .crm = 2, .opc2 = 2,
+      .resetvalue = 0,
+      .access = PL1_RW, .fieldoffset = offsetof(CPUARMState, cp15.ktrr_lock_el1) },
+    { .name = "KTRR_LOWER_EL1", .state = ARM_CP_STATE_AA64,
+      .opc0 = 3, .opc1 = 4, .crn = 15, .crm = 2, .opc2 = 3,
+      .resetvalue = 0,
+      .access = PL1_RW, .fieldoffset = offsetof(CPUARMState, cp15.ktrr_lower_el1) },
+    { .name = "KTRR_UPPER_EL1", .state = ARM_CP_STATE_AA64,
+      .opc0 = 3, .opc1 = 4, .crn = 15, .crm = 2, .opc2 = 4,
+      .resetvalue = 0,
+      .access = PL1_RW, .fieldoffset = offsetof(CPUARMState, cp15.ktrr_upper_el1) },
+    // no ktrr register 5, I think.
+    { .name = "KTRR_MYSTERY6_EL1", .state = ARM_CP_STATE_AA64,
+      .opc0 = 3, .opc1 = 4, .crn = 15, .crm = 2, .opc2 = 6,
+      .resetvalue = 0,
+      .access = PL1_RW, .fieldoffset = offsetof(CPUARMState, cp15.ktrr_mystery6_el1) },
+    { .name = "KTRR_MYSTERY7_EL1", .state = ARM_CP_STATE_AA64,
+      .opc0 = 3, .opc1 = 4, .crn = 15, .crm = 2, .opc2 = 7,
+      .resetvalue = 0,
+      .access = PL1_RW, .fieldoffset = offsetof(CPUARMState, cp15.ktrr_mystery7_el1) },
+    // start citruz
+    { .name = "APPLE_UNKN_1_0_8_2_1", .state = ARM_CP_STATE_AA64,
+      .opc0 = 1, .opc1 = 0, .crn = 8, .crm = 2, .opc2 = 1,
+      .resetvalue = 0,
+      .access = PL1_RW, .fieldoffset = offsetof(CPUARMState, cp15.apple_1_0_8_2_1) },
+    { .name = "APPLE_UNKN_1_0_8_2_3", .state = ARM_CP_STATE_AA64,
+      .opc0 = 1, .opc1 = 0, .crn = 8, .crm = 2, .opc2 = 3,
+      .resetvalue = 0,
+      .access = PL1_RW, .fieldoffset = offsetof(CPUARMState, cp15.apple_1_0_8_2_3) },
+    { .name = "APPLE_UNKN_1_0_8_6_3", .state = ARM_CP_STATE_AA64,
+      .opc0 = 1, .opc1 = 0, .crn = 8, .crm = 6, .opc2 = 3,
+      .resetvalue = 0,
+      .access = PL1_RW, .fieldoffset = offsetof(CPUARMState, cp15.apple_1_0_8_6_3) },
+    { .name = "APPLE_EHID20", .state = ARM_CP_STATE_AA64,
+      .opc0 = 3, .opc1 = 0, .crn = 15, .crm = 1, .opc2 = 2,
+      .resetvalue = 0,
+      .access = PL1_RW, .fieldoffset = offsetof(CPUARMState, cp15.apple_ehid20) },
+    { .name = "APPLE_EHID3", .state = ARM_CP_STATE_AA64,
+      .opc0 = 3, .opc1 = 0, .crn = 15, .crm = 3, .opc2 = 1,
+      .resetvalue = 0,
+      .access = PL1_RW, .fieldoffset = offsetof(CPUARMState, cp15.apple_ehid3) },
+    { .name = "APPLE_HID4", .state = ARM_CP_STATE_AA64,
+      .opc0 = 3, .opc1 = 0, .crn = 15, .crm = 4, .opc2 = 0,
+      .resetvalue = 0,
+      .access = PL1_RW, .fieldoffset = offsetof(CPUARMState, cp15.apple_hid4) },
+    { .name = "APPLE_EHID4", .state = ARM_CP_STATE_AA64,
+      .opc0 = 3, .opc1 = 0, .crn = 15, .crm = 4, .opc2 = 1,
+      .resetvalue = 0,
+      .access = PL1_RW, .fieldoffset = offsetof(CPUARMState, cp15.apple_ehid4) },
+    { .name = "APPLE_HID5", .state = ARM_CP_STATE_AA64,
+      .opc0 = 3, .opc1 = 0, .crn = 15, .crm = 5, .opc2 = 0,
+      .resetvalue = 0,
+      .access = PL1_RW, .fieldoffset = offsetof(CPUARMState, cp15.apple_hid5) },
+    { .name = "APPLE_EHID9", .state = ARM_CP_STATE_AA64,
+      .opc0 = 3, .opc1 = 0, .crn = 15, .crm = 9, .opc2 = 1,
+      .resetvalue = 0,
+      .access = PL1_RW, .fieldoffset = offsetof(CPUARMState, cp15.apple_ehid9) },
+    { .name = "APPLE_EHID10", .state = ARM_CP_STATE_AA64,
+      .opc0 = 3, .opc1 = 0, .crn = 15, .crm = 10, .opc2 = 1,
+      .resetvalue = 0,
+      .access = PL1_RW, .fieldoffset = offsetof(CPUARMState, cp15.apple_ehid10) },
+    { .name = "APPLE_MIGSTS_EL1", .state = ARM_CP_STATE_AA64,
+      .opc0 = 3, .opc1 = 4, .crn = 15, .crm = 0, .opc2 = 4,
+      .resetvalue = 2, // kernel checks for bit 1
+      .access = PL1_RW, .fieldoffset = offsetof(CPUARMState, cp15.apple_migsts_el1) },
+    { .name = "APPLE_REG_VMSA_LOCK_EL1", .state = ARM_CP_STATE_AA64,
+      .opc0 = 3, .opc1 = 4, .crn = 15, .crm = 1, .opc2 = 2,
+      .resetvalue = 0,
+      .access = PL1_RW, .fieldoffset = offsetof(CPUARMState, cp15.apple_reg_vmsa_lock_el1) },
+    { .name = "APPLE_UNKN_3_4_15_1_3", .state = ARM_CP_STATE_AA64,
+      .opc0 = 3, .opc1 = 4, .crn = 15, .crm = 1, .opc2 = 3,
+      .resetvalue = 0,
+      .access = PL1_RW, .fieldoffset = offsetof(CPUARMState, cp15.apple_3_4_15_1_3) },
+    { .name = "APPLE_UNKN_3_4_15_1_4", .state = ARM_CP_STATE_AA64,
+      .opc0 = 3, .opc1 = 4, .crn = 15, .crm = 1, .opc2 = 4,
+      .resetvalue = 0,
+      .access = PL1_RW, .fieldoffset = offsetof(CPUARMState, cp15.apple_3_4_15_1_4) },
+    { .name = "APPLE_UNKN_3_4_15_5_0", .state = ARM_CP_STATE_AA64,
+      .opc0 = 3, .opc1 = 4, .crn = 15, .crm = 5, .opc2 = 0,
+      .resetvalue = 0,
+      .access = PL1_RW, .fieldoffset = offsetof(CPUARMState, cp15.apple_3_4_15_5_0) },
+    { .name = "APPLE_UNKN_3_4_15_10_6", .state = ARM_CP_STATE_AA64, // some timer, replaces cntvct_el0 on M1
+      .opc0 = 3, .opc1 = 4, .crn = 15, .crm = 10, .opc2 = 6,
+      .resetvalue = 0,
+      //.access = PL1_RW, .fieldoffset = offsetof(CPUARMState, cp15.apple_3_4_15_10_6) },
+      .access = PL0_R, .type = ARM_CP_NO_RAW | ARM_CP_IO,
+      .accessfn = gt_vct_access, .readfn = gt_virt_cnt_read },
+    { .name = "APPLE_UNKN_3_5_15_1_1", .state = ARM_CP_STATE_AA64,
+      .opc0 = 3, .opc1 = 5, .crn = 15, .crm = 1, .opc2 = 1,
+      .resetvalue = 0,
+      .access = PL1_RW, .fieldoffset = offsetof(CPUARMState, cp15.apple_3_5_15_1_1) },
+    { .name = "APPLE_CYC_CFG", .state = ARM_CP_STATE_AA64,
+      .opc0 = 3, .opc1 = 5, .crn = 15, .crm = 4, .opc2 = 0,
+      .resetvalue = 0,
+      .access = PL1_RW, .fieldoffset = offsetof(CPUARMState, cp15.apple_cyc_cfg) },
+    { .name = "APPLE_CYC_OVRD", .state = ARM_CP_STATE_AA64,
+      .opc0 = 3, .opc1 = 5, .crn = 15, .crm = 5, .opc2 = 0,
+      .resetvalue = 0,
+      .access = PL1_RW, .fieldoffset = offsetof(CPUARMState, cp15.apple_cyc_ovrd) },
+    // the next ones are probably M1 specific, they are not in the DTK kernel
+    { .name = "APPLE_UNKN_3_6_15_1_0", .state = ARM_CP_STATE_AA64,
+      .opc0 = 3, .opc1 = 6, .crn = 15, .crm = 1, .opc2 = 0,
+      .resetvalue = 0,
+      .access = PL1_RW, .fieldoffset = offsetof(CPUARMState, cp15.apple_3_6_15_1_0) },
+    { .name = "APPLE_UNKN_3_6_15_1_5", .state = ARM_CP_STATE_AA64,
+      .opc0 = 3, .opc1 = 6, .crn = 15, .crm = 1, .opc2 = 5,
+      .resetvalue = 0,
+      .access = PL1_RW, .fieldoffset = offsetof(CPUARMState, cp15.apple_3_6_15_1_5) },
+    { .name = "APPLE_UNKN_3_6_15_1_6", .state = ARM_CP_STATE_AA64,
+      .opc0 = 3, .opc1 = 6, .crn = 15, .crm = 1, .opc2 = 6,
+      .resetvalue = 0,
+      .access = PL1_RW, .fieldoffset = offsetof(CPUARMState, cp15.apple_3_6_15_1_6) },
+    { .name = "APPLE_UNKN_3_6_15_3_0", .state = ARM_CP_STATE_AA64,
+      .opc0 = 3, .opc1 = 6, .crn = 15, .crm = 3, .opc2 = 0,
+      .resetvalue = 0,
+      .access = PL1_RW, .fieldoffset = offsetof(CPUARMState, cp15.apple_3_6_15_3_0) },
+    { .name = "APPLE_UNKN_3_6_15_8_0", .state = ARM_CP_STATE_AA64,
+      .opc0 = 3, .opc1 = 6, .crn = 15, .crm = 8, .opc2 = 0,
+      .resetvalue = 0,
+      .access = PL1_RW, .fieldoffset = offsetof(CPUARMState, cp15.apple_3_6_15_8_0) },
+    { .name = "APPLE_UNKN_3_6_15_10_1", .state = ARM_CP_STATE_AA64,
+      .opc0 = 3, .opc1 = 6, .crn = 15, .crm = 10, .opc2 = 1,
+      .resetvalue = 0,
+      .access = PL1_RW, .fieldoffset = offsetof(CPUARMState, cp15.apple_3_6_15_10_1) },
+    { .name = "APPLE_UNKN_3_6_15_11_1", .state = ARM_CP_STATE_AA64,
+      .opc0 = 3, .opc1 = 6, .crn = 15, .crm = 11, .opc2 = 1,
+      .resetvalue = 0,
+      .access = PL1_RW, .fieldoffset = offsetof(CPUARMState, cp15.apple_3_6_15_11_1) },
+    { .name = "APPLE_APSTS_EL1", .state = ARM_CP_STATE_AA64,
+      .opc0 = 3, .opc1 = 6, .crn = 15, .crm = 12, .opc2 = 4,
+      .resetvalue = 1,
+      .access = PL1_RW, .fieldoffset = offsetof(CPUARMState, cp15.apple_apsts_el1) },
+    { .name = "APPLE_UNKN_3_7_15_0_4", .state = ARM_CP_STATE_AA64,
+      .opc0 = 3, .opc1 = 7, .crn = 15, .crm = 0, .opc2 = 4,
+      .resetvalue = 0,
+      .access = PL1_RW, .fieldoffset = offsetof(CPUARMState, cp15.apple_3_7_15_0_4) },
+    { .name = "APPLE_UNKN_3_7_15_5_4", .state = ARM_CP_STATE_AA64,
+      .opc0 = 3, .opc1 = 7, .crn = 15, .crm = 5, .opc2 = 4,
+      .resetvalue = 0,
+      .access = PL1_RW, .fieldoffset = offsetof(CPUARMState, cp15.apple_3_7_15_5_4) },
+    // next two are probably related to PAC
+    { .name = "APPLE_KERNELKEYLO_EL1", .state = ARM_CP_STATE_AA64,
+      .opc0 = 3, .opc1 = 4, .crn = 15, .crm = 1, .opc2 = 0,
+      .resetvalue = 0,
+      .access = PL1_RW, .fieldoffset = offsetof(CPUARMState, cp15.apple_kernelkeylo_el1) },
+    { .name = "APPLE_KERNELKEYHI_EL1", .state = ARM_CP_STATE_AA64,
+      .opc0 = 3, .opc1 = 4, .crn = 15, .crm = 1, .opc2 = 1,
+      .resetvalue = 0,
+      .access = PL1_RW, .fieldoffset = offsetof(CPUARMState, cp15.apple_kernelkeyhi_el1) },
+    // PMC REGISTERS
+    { .name = "PMC0", .state = ARM_CP_STATE_AA64,
+      .opc0 = 3, .opc1 = 2, .crn = 15, .crm = 0, .opc2 = 0,
+      .resetvalue = 0,
+      .access = PL1_RW, .fieldoffset = offsetof(CPUARMState, cp15.apple_pmc0) },
+    { .name = "PMC1", .state = ARM_CP_STATE_AA64,
+      .opc0 = 3, .opc1 = 2, .crn = 15, .crm = 1, .opc2 = 0,
+      .resetvalue = 0,
+      .access = PL1_RW, .fieldoffset = offsetof(CPUARMState, cp15.apple_pmc1) },
+    { .name = "PMC2", .state = ARM_CP_STATE_AA64,
+      .opc0 = 3, .opc1 = 2, .crn = 15, .crm = 2, .opc2 = 0,
+      .resetvalue = 0,
+      .access = PL1_RW, .fieldoffset = offsetof(CPUARMState, cp15.apple_pmc2) },
+    { .name = "PMC3", .state = ARM_CP_STATE_AA64,
+      .opc0 = 3, .opc1 = 2, .crn = 15, .crm = 3, .opc2 = 0,
+      .resetvalue = 0,
+      .access = PL1_RW, .fieldoffset = offsetof(CPUARMState, cp15.apple_pmc3) },
+    { .name = "PMC4", .state = ARM_CP_STATE_AA64,
+      .opc0 = 3, .opc1 = 2, .crn = 15, .crm = 4, .opc2 = 0,
+      .resetvalue = 0,
+      .access = PL1_RW, .fieldoffset = offsetof(CPUARMState, cp15.apple_pmc4) },
+    { .name = "PMC5", .state = ARM_CP_STATE_AA64,
+      .opc0 = 3, .opc1 = 2, .crn = 15, .crm = 5, .opc2 = 0,
+      .resetvalue = 0,
+      .access = PL1_RW, .fieldoffset = offsetof(CPUARMState, cp15.apple_pmc5) },
+    { .name = "PMC6", .state = ARM_CP_STATE_AA64,
+      .opc0 = 3, .opc1 = 2, .crn = 15, .crm = 6, .opc2 = 0,
+      .resetvalue = 0,
+      .access = PL1_RW, .fieldoffset = offsetof(CPUARMState, cp15.apple_pmc6) },
+    { .name = "PMC7", .state = ARM_CP_STATE_AA64,
+      .opc0 = 3, .opc1 = 2, .crn = 15, .crm = 7, .opc2 = 0,
+      .resetvalue = 0,
+      .access = PL1_RW, .fieldoffset = offsetof(CPUARMState, cp15.apple_pmc7) },
+    { .name = "PMC8", .state = ARM_CP_STATE_AA64,
+    // this is not a typo, PMC8 is defined as S3_2_c15_c9_0
+      .opc0 = 3, .opc1 = 2, .crn = 15, .crm = 9, .opc2 = 0,
+      .resetvalue = 0,
+      .access = PL1_RW, .fieldoffset = offsetof(CPUARMState, cp15.apple_pmc8) },
+    { .name = "PMC9", .state = ARM_CP_STATE_AA64,
+      .opc0 = 3, .opc1 = 2, .crn = 15, .crm = 10, .opc2 = 0,
+      .resetvalue = 0,
+      .access = PL1_RW, .fieldoffset = offsetof(CPUARMState, cp15.apple_pmc9) },
+    // PMCR registers
+    { .name = "PMCR0", .state = ARM_CP_STATE_AA64,
+      .opc0 = 3, .opc1 = 1, .crn = 15, .crm = 0, .opc2 = 0,
+      .resetvalue = 0,
+      .access = PL1_RW, .fieldoffset = offsetof(CPUARMState, cp15.apple_pmcr0) },
+    { .name = "PMCR1", .state = ARM_CP_STATE_AA64,
+      .opc0 = 3, .opc1 = 1, .crn = 15, .crm = 1, .opc2 = 0,
+      .resetvalue = 0,
+      .access = PL1_RW, .fieldoffset = offsetof(CPUARMState, cp15.apple_pmcr1) },
+    { .name = "PMCR2", .state = ARM_CP_STATE_AA64,
+      .opc0 = 3, .opc1 = 1, .crn = 15, .crm = 2, .opc2 = 0,
+      .resetvalue = 0,
+      .access = PL1_RW, .fieldoffset = offsetof(CPUARMState, cp15.apple_pmcr2) },
+    { .name = "PMCR3", .state = ARM_CP_STATE_AA64,
+      .opc0 = 3, .opc1 = 1, .crn = 15, .crm = 3, .opc2 = 0,
+      .resetvalue = 0,
+      .access = PL1_RW, .fieldoffset = offsetof(CPUARMState, cp15.apple_pmcr3) },
+    { .name = "PMCR4", .state = ARM_CP_STATE_AA64,
+      .opc0 = 3, .opc1 = 1, .crn = 15, .crm = 4, .opc2 = 0,
+      .resetvalue = 0,
+      .access = PL1_RW, .fieldoffset = offsetof(CPUARMState, cp15.apple_pmcr4) },
+    { .name = "PMESR0", .state = ARM_CP_STATE_AA64,
+      .opc0 = 3, .opc1 = 1, .crn = 15, .crm = 5, .opc2 = 0,
+      .resetvalue = 0,
+      .access = PL1_RW, .fieldoffset = offsetof(CPUARMState, cp15.apple_pmesr0) },
+    { .name = "PMESR1", .state = ARM_CP_STATE_AA64,
+      .opc0 = 3, .opc1 = 1, .crn = 15, .crm = 6, .opc2 = 0,
+      .resetvalue = 0,
+      .access = PL1_RW, .fieldoffset = offsetof(CPUARMState, cp15.apple_pmesr1) },
+    { .name = "PMSR", .state = ARM_CP_STATE_AA64,
+      .opc0 = 3, .opc1 = 1, .crn = 15, .crm = 13, .opc2 = 0,
+      .resetvalue = 0,
+      .access = PL1_RW, .fieldoffset = offsetof(CPUARMState, cp15.apple_pmsr) },
+    { .name = "OPMAT0", .state = ARM_CP_STATE_AA64,
+      .opc0 = 3, .opc1 = 1, .crn = 15, .crm = 7, .opc2 = 0,
+      .resetvalue = 0,
+      .access = PL1_RW, .fieldoffset = offsetof(CPUARMState, cp15.apple_opmat0) },
+    { .name = "OPMAT1", .state = ARM_CP_STATE_AA64,
+      .opc0 = 3, .opc1 = 1, .crn = 15, .crm = 8, .opc2 = 0,
+      .resetvalue = 0,
+      .access = PL1_RW, .fieldoffset = offsetof(CPUARMState, cp15.apple_opmat1) },
+    { .name = "OPMSK0", .state = ARM_CP_STATE_AA64,
+      .opc0 = 3, .opc1 = 1, .crn = 15, .crm = 9, .opc2 = 0,
+      .resetvalue = 0,
+      .access = PL1_RW, .fieldoffset = offsetof(CPUARMState, cp15.apple_opmsk0) },
+    { .name = "OPMSK1", .state = ARM_CP_STATE_AA64,
+      .opc0 = 3, .opc1 = 1, .crn = 15, .crm = 10, .opc2 = 0,
+      .resetvalue = 0,
+      .access = PL1_RW, .fieldoffset = offsetof(CPUARMState, cp15.apple_opmsk1) },
     REGINFO_SENTINEL
 };
 
@@ -8055,10 +8345,10 @@ void register_cp_regs_for_features(ARMCPU *cpu)
                   .type = ARM_CP_CONST,
                   .cp = 15, .crn = 15, .crm = 3, .opc1 = 1, .opc2 = 0,
                   .access = PL1_R, .resetvalue = cbar32 },
-                { .name = "CBAR_EL1", .state = ARM_CP_STATE_AA64,
-                  .type = ARM_CP_CONST,
-                  .opc0 = 3, .opc1 = 1, .crn = 15, .crm = 3, .opc2 = 0,
-                  .access = PL1_R, .resetvalue = cpu->reset_cbar },
+//                { .name = "CBAR_EL1", .state = ARM_CP_STATE_AA64,
+//                  .type = ARM_CP_CONST,
+//                  .opc0 = 3, .opc1 = 1, .crn = 15, .crm = 3, .opc2 = 0,
+//                  .access = PL1_R, .resetvalue = cpu->reset_cbar },
                 REGINFO_SENTINEL
             };
             /* We don't implement a r/w 64 bit CBAR currently */
@@ -8554,7 +8844,9 @@ void define_one_arm_cp_reg_with_opaque(ARMCPU *cpu,
             break;
         }
         /* assert our permissions are not too lax (stricter is fine) */
-        assert((r->access & ~mask) == 0);
+        // https://github.com/zhuowei/qemu/commit/4762568cf6540706370025745fc8a80a3bdc1da4
+        // zhuowei: hack. make KTRR registers writable from EL1 even though they have opc1=4
+        // assert((r->access & ~mask) == 0);
     }
 
     /* Check that the register definition has enough info to handle

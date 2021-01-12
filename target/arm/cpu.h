@@ -506,6 +506,74 @@ typedef struct CPUARMState {
         uint64_t tfsr_el[4]; /* tfsre0_el1 is index 0.  */
         uint64_t gcr_el1;
         uint64_t rgsr_el1;
+
+        // https://github.com/zhuowei/qemu/commit/4762568cf6540706370025745fc8a80a3bdc1da4
+        uint64_t ktrr_mystery0_el1; // ktrr reg 0
+        uint64_t ktrr_mystery1_el1; // ktrr reg 1
+        uint64_t ktrr_lock_el1; // ktrr reg 2
+        uint64_t ktrr_lower_el1; // ktrr reg 3
+        uint64_t ktrr_upper_el1; // ktrr reg 4
+        uint64_t ktrr_mystery6_el1; // ktrr reg 6
+        uint64_t ktrr_mystery7_el1; // ktrr reg 7
+        // start citruz
+        uint64_t apple_1_0_8_2_1; // used with the sys instruction in pmap context
+        uint64_t apple_1_0_8_2_3; // same
+        uint64_t apple_1_0_8_6_3; // same
+        uint64_t apple_ehid20; // added for M1
+        uint64_t apple_ehid3; // kernel sets bit 2
+        uint64_t apple_hid4;
+        uint64_t apple_ehid4; // kernel sets bit 11, 39 and 44 to 1
+        uint64_t apple_hid5;
+        uint64_t apple_ehid9; // added for M1
+        uint64_t apple_ehid10; // kernel sets bit 19
+
+        uint64_t apple_migsts_el1; // ?? kernel checks for bit 1
+        // bit 4: CPU supports fast A key switching
+
+        uint64_t apple_reg_vmsa_lock_el1; // added for M1
+        uint64_t apple_3_4_15_1_3; // added for M1
+        uint64_t apple_3_4_15_1_4; // added for M1
+        uint64_t apple_3_4_15_5_0; // added for M1
+        uint64_t apple_3_4_15_10_6; // added for M1, seems to replace cntvct_el0 (used in mach_absolute_time)
+        uint64_t apple_3_5_15_1_1; // added for M1
+        uint64_t apple_cyc_cfg; // set_bp_ret
+        uint64_t apple_cyc_ovrd; // kernel clears bit 20-23
+        uint64_t apple_3_6_15_1_0;
+        uint64_t apple_3_6_15_1_5; // added for M1
+        uint64_t apple_3_6_15_1_6;
+        uint64_t apple_3_6_15_3_0;
+        uint64_t apple_3_6_15_8_0; // added for M1
+        uint64_t apple_3_6_15_10_1; // added for M1
+        uint64_t apple_3_6_15_11_1; // added for M1
+        uint64_t apple_3_7_15_0_4;
+        uint64_t apple_3_7_15_5_4;
+        uint64_t apple_apsts_el1; // ?? kernel checks for bit 1
+        uint64_t apple_kernelkeylo_el1; // kernel stores key
+        uint64_t apple_kernelkeyhi_el1; // kernel stores key
+        // PMC
+        uint64_t apple_pmc0;
+        uint64_t apple_pmc1;
+        uint64_t apple_pmc2;
+        uint64_t apple_pmc3;
+        uint64_t apple_pmc4;
+        uint64_t apple_pmc5;
+        uint64_t apple_pmc6;
+        uint64_t apple_pmc7;
+        uint64_t apple_pmc8;
+        uint64_t apple_pmc9;
+        // PMCR
+        uint64_t apple_pmcr0;
+        uint64_t apple_pmcr1;
+        uint64_t apple_pmcr2;
+        uint64_t apple_pmcr3;
+        uint64_t apple_pmcr4;
+        uint64_t apple_pmesr0;
+        uint64_t apple_pmesr1;
+        uint64_t apple_pmsr;
+        uint64_t apple_opmat0;
+        uint64_t apple_opmat1;
+        uint64_t apple_opmsk0;
+        uint64_t apple_opmsk1;
     } cp15;
 
     struct {

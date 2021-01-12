@@ -29,7 +29,7 @@
 #include "trace.h"
 #include "sysemu/kvm.h"
 
-/* #define DEBUG_GIC */
+//#define DEBUG_GIC
 
 #ifdef DEBUG_GIC
 #define DEBUG_GIC_GATE 1
@@ -167,6 +167,8 @@ static inline void gic_update_internal(GICState *s, bool virt)
     int group = 0;
     qemu_irq *irq_lines = virt ? s->parent_virq : s->parent_irq;
     qemu_irq *fiq_lines = virt ? s->parent_vfiq : s->parent_fiq;
+
+    DPRINTF("Update\n");
 
     for (cpu = 0; cpu < s->num_cpu; cpu++) {
         cpu_iface = virt ? (cpu + GIC_NCPU) : cpu;
@@ -384,6 +386,8 @@ static void gic_set_irq(void *opaque, int irq, int level)
      *  [N+32..N+63] : PPI (internal interrupts for CPU 1
      *  ...
      */
+
+    DPRINTF("set_irq irq=%d level=%d\n", irq, level);
     GICState *s = (GICState *)opaque;
     int cm, target;
     if (irq < (s->num_irq - GIC_INTERNAL)) {
@@ -400,17 +404,22 @@ static void gic_set_irq(void *opaque, int irq, int level)
         target = cm;
     }
 
+    DPRINTF("cm=%x irq=%d target=%d\n", cm, irq, target);
     assert(irq >= GIC_NR_SGIS);
 
     if (level == GIC_DIST_TEST_LEVEL(irq, cm)) {
+        DPRINTF("fail\n");
         return;
     }
 
     if (s->revision == REV_11MPCORE) {
+        DPRINTF("1\n");
         gic_set_irq_11mpcore(s, irq, level, cm, target);
     } else {
+        DPRINTF("1\n");
         gic_set_irq_generic(s, irq, level, cm, target);
     }
+    DPRINTF("3\n");
     trace_gic_set_irq(irq, level, cm, target);
 
     gic_update(s);

@@ -1804,8 +1804,8 @@ static void handle_sys(DisasContext *s, uint32_t insn, bool isread,
          * unimplemented feature.
          */
         qemu_log_mask(LOG_UNIMP, "%s access to unsupported AArch64 "
-                      "system register op0:%d op1:%d crn:%d crm:%d op2:%d\n",
-                      isread ? "read" : "write", op0, op1, crn, crm, op2);
+                      "system register op0:%d op1:%d crn:%d crm:%d op2:%d pc=%#llx\n",
+                      isread ? "read" : "write", op0, op1, crn, crm, op2, s->pc_curr);
         unallocated_encoding(s);
         return;
     }

@@ -45,6 +45,7 @@
     ((op0 << 20) | (op2 << 17) | (op1 << 14) | (crn << 10) | (crm << 1))
 #define SYSREG_MASK           SYSREG(0x3, 0x7, 0x7, 0xf, 0xf)
 #define SYSREG_CNTPCT_EL0     SYSREG(3, 3, 1, 14, 0)
+#define SYSREG_CNTVCT_EL0     SYSREG(3, 3, 2, 14, 0)
 #define SYSREG_PMCCNTR_EL0    SYSREG(3, 3, 0, 9, 13)
 
 #define SYSREG_ICC_AP0R0_EL1     SYSREG(3, 0, 4, 12, 8)
@@ -73,6 +74,8 @@
 #define SYSREG_ICC_SGI0R_EL1     SYSREG(3, 0, 7, 12, 11)
 #define SYSREG_ICC_SGI1R_EL1     SYSREG(3, 0, 5, 12, 11)
 #define SYSREG_ICC_SRE_EL1       SYSREG(3, 0, 5, 12, 12)
+
+#define SYSREG_APPLE_UNKN_TIMER SYSREG(3, 4, 6, 15, 10)
 
 #define WFX_IS_WFE (1 << 0)
 
@@ -514,8 +517,14 @@ static uint64_t hvf_sysreg_read_cp(CPUState *cpu, uint32_t reg)
             val = CPREG_FIELD64(env, ri);
         }
         DPRINTF("vgic read from %s [val=%016llx]", ri->name, val);
-    }
+    } else {
 
+        printf("unhandled sysreg read @ %#llx %08x (op0=%d op1=%d op2=%d "
+                    "crn=%d crm=%d)\n", env->pc, reg, (reg >> 20) & 0x3,
+                    (reg >> 14) & 0x7, (reg >> 17) & 0x7,
+                    (reg >> 10) & 0xf, (reg >> 1) & 0xf);
+        exit(1);
+    }
     return val;
 }
 
@@ -523,15 +532,20 @@ static uint64_t hvf_sysreg_read(CPUState *cpu, uint32_t reg)
 {
     ARMCPU *arm_cpu = ARM_CPU(cpu);
     uint64_t val = 0;
+    bool print = false;
 
     switch (reg) {
     case SYSREG_CNTPCT_EL0:
+    case SYSREG_APPLE_UNKN_TIMER:
         val = qemu_clock_get_ns(QEMU_CLOCK_VIRTUAL) /
               gt_cntfrq_period_ns(arm_cpu);
+        //printf("read SYSREG_CNTPCT_EL0 val = %#llx\n", val);
         break;
     case SYSREG_PMCCNTR_EL0:
         val = qemu_clock_get_ns(QEMU_CLOCK_VIRTUAL);
+        printf("read SYSREG_PMCCNTR_EL0 val = %#llx\n", val);
         break;
+        //print = true;
     case SYSREG_ICC_AP0R0_EL1:
     case SYSREG_ICC_AP0R1_EL1:
     case SYSREG_ICC_AP0R2_EL1:
@@ -557,6 +571,7 @@ static uint64_t hvf_sysreg_read(CPUState *cpu, uint32_t reg)
     case SYSREG_ICC_SGI1R_EL1:
     case SYSREG_ICC_SRE_EL1:
         val = hvf_sysreg_read_cp(cpu, reg);
+        //if (print) printf("read SYSREG_APPLE_UNKN_TIMER val = %#llx\n", val);
         break;
     case SYSREG_ICC_CTLR_EL1:
         val = hvf_sysreg_read_cp(cpu, reg);
@@ -566,10 +581,13 @@ static uint64_t hvf_sysreg_read(CPUState *cpu, uint32_t reg)
         val |= 4 << ICC_CTLR_EL1_PRIBITS_SHIFT;
         break;
     default:
-        DPRINTF("unhandled sysreg read %08x (op0=%d op1=%d op2=%d "
-                "crn=%d crm=%d)", reg, (reg >> 20) & 0x3,
-                (reg >> 14) & 0x7, (reg >> 17) & 0x7,
-                (reg >> 10) & 0xf, (reg >> 1) & 0xf);
+        val = hvf_sysreg_read_cp(cpu, reg);
+        if (!val) {
+            DPRINTF("unhandled sysreg read %08x (op0=%d op1=%d op2=%d "
+                    "crn=%d crm=%d)", reg, (reg >> 20) & 0x3,
+                    (reg >> 14) & 0x7, (reg >> 17) & 0x7,
+                    (reg >> 10) & 0xf, (reg >> 1) & 0xf);
+        }
         break;
     }
 
@@ -597,10 +615,14 @@ static void hvf_sysreg_write_cp(CPUState *cpu, uint32_t reg, uint64_t val)
 static void hvf_sysreg_write(CPUState *cpu, uint32_t reg, uint64_t val)
 {
     ARMCPU *arm_cpu = ARM_CPU(cpu);
+    bool print = false;
 
     switch (reg) {
     case SYSREG_CNTPCT_EL0:
         break;
+    case SYSREG_APPLE_UNKN_TIMER:
+        reg = SYSREG_CNTVCT_EL0;
+        print = true;
     case SYSREG_ICC_AP0R0_EL1:
     case SYSREG_ICC_AP0R1_EL1:
     case SYSREG_ICC_AP0R2_EL1:
@@ -625,6 +647,7 @@ static void hvf_sysreg_write(CPUState *cpu, uint32_t reg, uint64_t val)
     case SYSREG_ICC_SGI1R_EL1:
     case SYSREG_ICC_SRE_EL1:
         hvf_sysreg_write_cp(cpu, reg, val);
+        if (print) printf("write SYSREG_APPLE_UNKN_TIMER val = %#llx\n", val);
         break;
     case SYSREG_ICC_EOIR0_EL1:
     case SYSREG_ICC_EOIR1_EL1:
@@ -632,7 +655,8 @@ static void hvf_sysreg_write(CPUState *cpu, uint32_t reg, uint64_t val)
         qemu_set_irq(arm_cpu->gt_timer_outputs[GTIMER_VIRT], 0);
         hv_vcpu_set_vtimer_mask(cpu->hvf->fd, false);
     default:
-        DPRINTF("unhandled sysreg write %08x", reg);
+        hvf_sysreg_write_cp(cpu, reg, val);
+        //DPRINTF("unhandled sysreg write %08x", reg);
         break;
     }
 }
@@ -640,12 +664,12 @@ static void hvf_sysreg_write(CPUState *cpu, uint32_t reg, uint64_t val)
 static int hvf_inject_interrupts(CPUState *cpu)
 {
     if (cpu->interrupt_request & CPU_INTERRUPT_FIQ) {
-        DPRINTF("injecting FIQ");
+        //printf("injecting FIQ\n");
         hv_vcpu_set_pending_interrupt(cpu->hvf->fd, HV_INTERRUPT_TYPE_FIQ, true);
     }
 
     if (cpu->interrupt_request & CPU_INTERRUPT_HARD) {
-        DPRINTF("injecting IRQ");
+        printf("injecting IRQ");
         hv_vcpu_set_pending_interrupt(cpu->hvf->fd, HV_INTERRUPT_TYPE_IRQ, true);
     }
 
@@ -658,6 +682,7 @@ static void hvf_wait_for_ipi(CPUState *cpu, struct timespec *ts)
      * Use pselect to sleep so that other threads can IPI us while we're
      * sleeping.
      */
+    printf("wait for ipi\n");
     qatomic_mb_set(&cpu->thread_kicked, false);
     qemu_mutex_unlock_iothread();
     pselect(0, 0, 0, 0, ts, &cpu->hvf->unblock_ipi_mask);
@@ -688,6 +713,8 @@ int hvf_vcpu_exec(CPUState *cpu)
         qemu_mutex_unlock_iothread();
         assert_hvf_ok(hv_vcpu_run(cpu->hvf->fd));
 
+        hvf_get_registers(cpu);
+
         /* handle VMEXIT */
         uint64_t exit_reason = hvf_exit->reason;
         uint64_t syndrome = hvf_exit->exception.syndrome;
@@ -708,6 +735,8 @@ int hvf_vcpu_exec(CPUState *cpu)
             assert(0);
         }
 
+        DPRINTF("VM Exit: ec=%d pc=0x%llx", ec, env->pc);
+
         switch (ec) {
         case EC_DATAABORT: {
             bool isv = syndrome & ARM_EL_ISV;
@@ -717,14 +746,20 @@ int hvf_vcpu_exec(CPUState *cpu)
             uint32_t len = 1 << sas;
             uint32_t srt = (syndrome >> 16) & 0x1f;
             uint64_t val = 0;
+            int cur_el = arm_current_el(env);
 
             DPRINTF("data abort: [pc=0x%llx va=0x%016llx pa=0x%016llx isv=%x "
-                    "iswrite=%x s1ptw=%x len=%d srt=%d]\n",
+                    "iswrite=%x s1ptw=%x len=%d srt=%d el=%d]",
                     env->pc, hvf_exit->exception.virtual_address,
                     hvf_exit->exception.physical_address, isv, iswrite,
-                    s1ptw, len, srt);
+                    s1ptw, len, srt, cur_el);
 
-            assert(isv);
+            if (!isv) {
+                extern void aarch64_cpu_dump_state(CPUState *cs, FILE *f, int flags);
+
+                aarch64_cpu_dump_state(cpu, stdout, 0);
+                exit(0);
+            }
 
             if (iswrite) {
                 val = hvf_get_reg(cpu, srt);
@@ -757,9 +792,9 @@ int hvf_vcpu_exec(CPUState *cpu)
             uint32_t reg = syndrome & SYSREG_MASK;
             uint64_t val = 0;
 
-            DPRINTF("sysreg %s operation reg=%08x (op0=%d op1=%d op2=%d "
+            DPRINTF("sysreg %s operation reg=%08x val=%#llx (op0=%d op1=%d op2=%d "
                     "crn=%d crm=%d)", (isread) ? "read" : "write",
-                    reg, (reg >> 20) & 0x3,
+                    reg, isread ? hvf_sysreg_read(cpu, reg) : val, (reg >> 20) & 0x3,
                     (reg >> 14) & 0x7, (reg >> 17) & 0x7,
                     (reg >> 10) & 0xf, (reg >> 1) & 0xf);
 
@@ -774,6 +809,7 @@ int hvf_vcpu_exec(CPUState *cpu)
             break;
         }
         case EC_WFX_TRAP:
+            printf("wfx trap\n");
             advance_pc = true;
             if (!(syndrome & WFX_IS_WFE) && !(cpu->interrupt_request &
                 (CPU_INTERRUPT_HARD | CPU_INTERRUPT_FIQ))) {

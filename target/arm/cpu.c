@@ -778,7 +778,7 @@ static void arm_disas_set_info(CPUState *cpu, disassemble_info *info)
 
 #ifdef TARGET_AARCH64
 
-static void aarch64_cpu_dump_state(CPUState *cs, FILE *f, int flags)
+void aarch64_cpu_dump_state(CPUState *cs, FILE *f, int flags)
 {
     ARMCPU *cpu = ARM_CPU(cs);
     CPUARMState *env = &cpu->env;

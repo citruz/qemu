@@ -42,6 +42,8 @@ void qemu_set_irq(qemu_irq irq, int level)
     if (!irq)
         return;
 
+    //printf("%s irq=%p handler=%p n=%d level=%d\n", __func__, irq, irq->handler, irq->n, level);
+
     irq->handler(irq->opaque, irq->n, level);
 }
 

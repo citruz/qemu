@@ -655,6 +655,8 @@ DeviceState *exynos4210_uart_create(hwaddr addr,
 
     dev = qdev_new(TYPE_EXYNOS4210_UART);
 
+    printf("exynos4210_uart_create irq=%p\n", irq);
+
     qdev_prop_set_chr(dev, "chardev", chr);
     qdev_prop_set_uint32(dev, "channel", channel);
     qdev_prop_set_uint32(dev, "rx-size", fifo_size);

@@ -79,6 +79,9 @@
 #include "hw/char/pl011.h"
 #include "qemu/guest-random.h"
 
+#include "hw/arm/exynos4210.h"
+
+
 #define DEFINE_VIRT_MACHINE_LATEST(major, minor, latest) \
     static void virt_##major##_##minor##_class_init(ObjectClass *oc, \
                                                     void *data) \
@@ -159,8 +162,13 @@ static const MemMapEntry base_memmap[] = {
     [VIRT_PCIE_MMIO] =          { 0x10000000, 0x2eff0000 },
     [VIRT_PCIE_PIO] =           { 0x3eff0000, 0x00010000 },
     [VIRT_PCIE_ECAM] =          { 0x3f000000, 0x01000000 },
+    // zhuowei: t8015 peripherals
+    //[VIRT_AMCC] =               { 0x200000000, 0x00300000 }, // zhuowei: hack
+    //[VIRT_AIO] =                { 0x210000000, 0x10000000 }, // zhuowei: hack
+    [VIRT_S3C_UART] =           { 0x235200000, 0x00001000 }, // zhuowei: hack
+    //[VIRT_AIC] =                { 0x23b100000, 0x00009000 }, // zhuowei: hack
     /* Actual RAM size depends on initial RAM and device memory settings */
-    [VIRT_MEM] =                { GiB, LEGACY_RAMLIMIT_BYTES },
+    [VIRT_MEM] =                { 0x800000000, LEGACY_RAMLIMIT_BYTES },
 };
 
 /*
@@ -188,6 +196,7 @@ static const int a15irqmap[] = {
     [VIRT_GPIO] = 7,
     [VIRT_SECURE_UART] = 8,
     [VIRT_ACPI_GED] = 9,
+    [VIRT_S3C_UART] = 10,
     [VIRT_MMIO] = 16, /* ...to 16 + NUM_VIRTIO_TRANSPORTS - 1 */
     [VIRT_GIC_V2M] = 48, /* ...to 48 + NUM_GICV2M_SPIS - 1 */
     [VIRT_SMMU] = 74,    /* ...to 74 + NUM_SMMU_IRQS - 1 */
@@ -725,6 +734,10 @@ static void create_gic(VirtMachineState *vms)
                            qdev_get_gpio_in(cpudev, ARM_CPU_VIRQ));
         sysbus_connect_irq(gicbusdev, i + 3 * smp_cpus,
                            qdev_get_gpio_in(cpudev, ARM_CPU_VFIQ));
+
+        // zhuowei: hack: also wire timer to FIQ to match t8015
+        //qdev_connect_gpio_out(cpudev, GTIMER_PHYS, qdev_get_gpio_in(cpudev, ARM_CPU_FIQ));
+        qdev_connect_gpio_out(cpudev, GTIMER_VIRT, qdev_get_gpio_in(cpudev, ARM_CPU_FIQ));
     }
 
     fdt_add_gic_node(vms);
@@ -782,6 +795,33 @@ static void create_uart(const VirtMachineState *vms, int uart,
 
     g_free(nodename);
 }
+
+static void create_s3c_uart(const VirtMachineState *vms, int uart,
+                        MemoryRegion *mem, Chardev *chr)
+{
+    hwaddr base = vms->memmap[uart].base;
+    hwaddr size = vms->memmap[uart].size;
+    int irq = vms->irqmap[uart];
+    char *nodename;
+
+    DeviceState *dev = exynos4210_uart_create(base, 256, 0, chr, qdev_get_gpio_in(vms->gic, irq));
+    if (!dev) {
+        abort();
+    }
+
+    nodename = g_strdup_printf("/exynos4210@%" PRIx64, base);
+    qemu_fdt_add_subnode(vms->fdt, nodename);
+    qemu_fdt_setprop_string(vms->fdt, nodename, "compatible", "uart-1,samsung");
+    qemu_fdt_setprop_sized_cells(vms->fdt, nodename, "reg",
+                                     2, base, 2, size);
+
+    qemu_fdt_setprop_cells(vms->fdt, nodename, "interrupts",
+                               GIC_FDT_IRQ_TYPE_SPI, irq,
+                               GIC_FDT_IRQ_FLAGS_LEVEL_HI);
+
+    g_free(nodename);
+}
+
 
 static void create_rtc(const VirtMachineState *vms)
 {
@@ -1963,12 +2003,14 @@ static void machvirt_init(MachineState *machine)
 
     fdt_add_pmu_nodes(vms);
 
-    create_uart(vms, VIRT_UART, sysmem, serial_hd(0));
+    //create_uart(vms, VIRT_UART, sysmem, serial_hd(0));
 
-    if (vms->secure) {
-        create_secure_ram(vms, secure_sysmem, secure_tag_sysmem);
-        create_uart(vms, VIRT_SECURE_UART, secure_sysmem, serial_hd(1));
-    }
+    // if (vms->secure) {
+    //     create_secure_ram(vms, secure_sysmem, secure_tag_sysmem);
+    //     create_uart(vms, VIRT_SECURE_UART, secure_sysmem, serial_hd(1));
+    // }
+
+    create_s3c_uart(vms, VIRT_UART, sysmem, serial_hd(0));
 
     if (tag_sysmem) {
         create_tag_ram(tag_sysmem, vms->memmap[VIRT_MEM].base,
