@@ -669,7 +669,7 @@ static int hvf_inject_interrupts(CPUState *cpu)
     }
 
     if (cpu->interrupt_request & CPU_INTERRUPT_HARD) {
-        printf("injecting IRQ");
+        //printf("injecting IRQ");
         hv_vcpu_set_pending_interrupt(cpu->hvf->fd, HV_INTERRUPT_TYPE_IRQ, true);
     }
 
