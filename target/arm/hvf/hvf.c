@@ -77,6 +77,13 @@
 
 #define SYSREG_APPLE_UNKN_TIMER SYSREG(3, 4, 6, 15, 10)
 
+// PMAP handling
+#define SYSREG_MAGIC_PPL         SYSREG(3, 7, 7, 15, 15)
+
+#define PMAP_ENTER_OPTIONS 10
+#define PMAP_SIGN_USER_PTR 60
+#define PMAP_AUTH_USER_PTR 61
+
 #define WFX_IS_WFE (1 << 0)
 
 struct hvf_reg_match {
@@ -517,15 +524,50 @@ static uint64_t hvf_sysreg_read_cp(CPUState *cpu, uint32_t reg)
             val = CPREG_FIELD64(env, ri);
         }
         DPRINTF("vgic read from %s [val=%016llx]", ri->name, val);
+    } else if (reg == SYSREG_MAGIC_PPL) {
+        uint64_t op = env->xregs[15];
+
+        DPRINTF("PPL hook op=%#llx", op);
+        switch (op) {
+            case PMAP_ENTER_OPTIONS:
+                // dunno
+                break;
+            case PMAP_AUTH_USER_PTR:
+                printf("PMAP_AUTH_USER_PTR ptr=%#llx\n", env->xregs[0]);
+                env->xregs[0] &= 0xFFFFFFFFFFFF;
+                cpu->vcpu_dirty = true;
+            default:
+                printf("unhandled PPL op: %#llx\n", op);
+                cpu_dump_state(cpu, stderr, 0);
+                exit(1);
+        }
     } else {
 
         printf("unhandled sysreg read @ %#llx %08x (op0=%d op1=%d op2=%d "
                     "crn=%d crm=%d)\n", env->pc, reg, (reg >> 20) & 0x3,
                     (reg >> 14) & 0x7, (reg >> 17) & 0x7,
                     (reg >> 10) & 0xf, (reg >> 1) & 0xf);
+        cpu_dump_state(cpu, stderr, 0);
+
         exit(1);
     }
     return val;
+}
+
+static void my_cpu_dump_state(CPUState *cpu) {
+    ARMCPU *arm_cpu = ARM_CPU(cpu);
+    CPUARMState *env = &arm_cpu->env;
+
+    hvf_get_registers(cpu);
+
+    printf("DUMP STATE pc=0x%016llx\n", env->pc);
+
+    for (int i = 0; i < 31; i++) {
+        printf("x%d: 0x%016llx ", i, env->xregs[i]);
+        if (i && i % 3 == 0) {
+            printf("\n");
+        }
+    }
 }
 
 static uint64_t hvf_sysreg_read(CPUState *cpu, uint32_t reg)
@@ -536,16 +578,16 @@ static uint64_t hvf_sysreg_read(CPUState *cpu, uint32_t reg)
 
     switch (reg) {
     case SYSREG_CNTPCT_EL0:
-    case SYSREG_APPLE_UNKN_TIMER:
         val = qemu_clock_get_ns(QEMU_CLOCK_VIRTUAL) /
               gt_cntfrq_period_ns(arm_cpu);
         //printf("read SYSREG_CNTPCT_EL0 val = %#llx\n", val);
         break;
     case SYSREG_PMCCNTR_EL0:
         val = qemu_clock_get_ns(QEMU_CLOCK_VIRTUAL);
-        printf("read SYSREG_PMCCNTR_EL0 val = %#llx\n", val);
+        DPRINTF("read SYSREG_PMCCNTR_EL0 val = %#llx\n", val);
         break;
-        //print = true;
+    case SYSREG_APPLE_UNKN_TIMER:
+        print = true;
     case SYSREG_ICC_AP0R0_EL1:
     case SYSREG_ICC_AP0R1_EL1:
     case SYSREG_ICC_AP0R2_EL1:
@@ -571,7 +613,7 @@ static uint64_t hvf_sysreg_read(CPUState *cpu, uint32_t reg)
     case SYSREG_ICC_SGI1R_EL1:
     case SYSREG_ICC_SRE_EL1:
         val = hvf_sysreg_read_cp(cpu, reg);
-        //if (print) printf("read SYSREG_APPLE_UNKN_TIMER val = %#llx\n", val);
+        if (print) DPRINTF("read SYSREG_APPLE_UNKN_TIMER val = %#llx\n", val);
         break;
     case SYSREG_ICC_CTLR_EL1:
         val = hvf_sysreg_read_cp(cpu, reg);
@@ -609,6 +651,14 @@ static void hvf_sysreg_write_cp(CPUState *cpu, uint32_t reg, uint64_t val)
             CPREG_FIELD64(env, ri) = val;
         }
         DPRINTF("vgic write to %s [val=%016llx]", ri->name, val);
+    } else {
+
+        printf("unhandled sysreg write @ %#llx %08x (op0=%d op1=%d op2=%d "
+                    "crn=%d crm=%d)\n", env->pc, reg, (reg >> 20) & 0x3,
+                    (reg >> 14) & 0x7, (reg >> 17) & 0x7,
+                    (reg >> 10) & 0xf, (reg >> 1) & 0xf);
+        cpu_dump_state(cpu, stderr, 0);
+        exit(1);
     }
 }
 
@@ -621,7 +671,6 @@ static void hvf_sysreg_write(CPUState *cpu, uint32_t reg, uint64_t val)
     case SYSREG_CNTPCT_EL0:
         break;
     case SYSREG_APPLE_UNKN_TIMER:
-        reg = SYSREG_CNTVCT_EL0;
         print = true;
     case SYSREG_ICC_AP0R0_EL1:
     case SYSREG_ICC_AP0R1_EL1:
@@ -647,10 +696,11 @@ static void hvf_sysreg_write(CPUState *cpu, uint32_t reg, uint64_t val)
     case SYSREG_ICC_SGI1R_EL1:
     case SYSREG_ICC_SRE_EL1:
         hvf_sysreg_write_cp(cpu, reg, val);
-        if (print) printf("write SYSREG_APPLE_UNKN_TIMER val = %#llx\n", val);
+        if (print) DPRINTF("write SYSREG_APPLE_UNKN_TIMER val = %#llx\n", val);
         break;
     case SYSREG_ICC_EOIR0_EL1:
     case SYSREG_ICC_EOIR1_EL1:
+        DPRINTF("Wrote EOIR");
         hvf_sysreg_write_cp(cpu, reg, val);
         qemu_set_irq(arm_cpu->gt_timer_outputs[GTIMER_VIRT], 0);
         hv_vcpu_set_vtimer_mask(cpu->hvf->fd, false);
@@ -703,10 +753,12 @@ int hvf_vcpu_exec(CPUState *cpu)
         flush_cpu_state(cpu);
 
         if (hvf_inject_interrupts(cpu)) {
+            printf("EXCP_INTERRUPT\n");
             return EXCP_INTERRUPT;
         }
 
         if (cpu->halted) {
+            printf("HALTED\n");
             return EXCP_HLT;
         }
 
@@ -726,12 +778,14 @@ int hvf_vcpu_exec(CPUState *cpu)
             /* This is the main one, handle below. */
             break;
         case HV_EXIT_REASON_VTIMER_ACTIVATED:
+            DPRINTF("HV_EXIT_REASON_VTIMER_ACTIVATED\n");
             qemu_set_irq(arm_cpu->gt_timer_outputs[GTIMER_VIRT], 1);
             continue;
         case HV_EXIT_REASON_CANCELED:
             /* we got kicked, no exit to process */
             continue;
         default:
+            printf("unhandled exit reason %llu\n", exit_reason);
             assert(0);
         }
 
@@ -859,6 +913,7 @@ int hvf_vcpu_exec(CPUState *cpu)
             } else {
                 DPRINTF("unknown HVC! %016llx", env->xregs[0]);
                 env->xregs[0] = -1;
+                exit(1);
             }
             break;
         case EC_AA64_SMC:
@@ -868,6 +923,7 @@ int hvf_vcpu_exec(CPUState *cpu)
             } else {
                 DPRINTF("unknown SMC! %016llx", env->xregs[0]);
                 env->xregs[0] = -1;
+                exit(1);
             }
             env->pc += 4;
             break;
@@ -875,6 +931,7 @@ int hvf_vcpu_exec(CPUState *cpu)
             cpu_synchronize_state(cpu);
             DPRINTF("exit: %llx [ec=0x%x pc=0x%llx]", syndrome, ec, env->pc);
             error_report("%llx: unhandled exit %llx", env->pc, exit_reason);
+            exit(1);
         }
 
         if (advance_pc) {

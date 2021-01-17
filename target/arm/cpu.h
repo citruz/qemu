@@ -530,20 +530,31 @@ typedef struct CPUARMState {
         uint64_t apple_migsts_el1; // ?? kernel checks for bit 1
         // bit 4: CPU supports fast A key switching
 
-        uint64_t apple_reg_vmsa_lock_el1; // added for M1
+        uint64_t apple_reg_vmsa_lock_el1;
+        uint64_t apple_3_4_15_0_5; // added for M1
         uint64_t apple_3_4_15_1_3; // added for M1
         uint64_t apple_3_4_15_1_4; // added for M1
         uint64_t apple_3_4_15_5_0; // added for M1
         uint64_t apple_3_4_15_10_6; // added for M1, seems to replace cntvct_el0 (used in mach_absolute_time)
-        uint64_t apple_3_5_15_1_1; // added for M1
+        uint64_t apple_3_4_15_12_5;  // added for M1
+        uint64_t apple_3_5_15_0_0; // added for M1
+        uint64_t apple_3_5_15_1_1; // added for M1, IPI interrupt related
+        uint64_t apple_3_5_15_3_1; // added for M1
         uint64_t apple_cyc_cfg; // set_bp_ret
         uint64_t apple_cyc_ovrd; // kernel clears bit 20-23
         uint64_t apple_3_6_15_1_0;
+        uint64_t apple_3_6_15_1_2; // written to in  maybe_aprr_lockdown
         uint64_t apple_3_6_15_1_5; // added for M1
         uint64_t apple_3_6_15_1_6;
         uint64_t apple_3_6_15_3_0;
         uint64_t apple_3_6_15_8_0; // added for M1
+        uint64_t apple_3_6_15_8_1; // some addr written to in  maybe_aprr_lockdown
+        uint64_t apple_3_6_15_8_2; // some addr written to in  maybe_aprr_lockdown
         uint64_t apple_3_6_15_10_1; // added for M1
+        uint64_t apple_3_6_15_10_3; // added for M1
+        uint64_t apple_3_6_15_10_4; // added for M1
+        uint64_t apple_3_6_15_10_5; // added for M1
+        uint64_t apple_3_6_15_10_6; // APRR_EL1
         uint64_t apple_3_6_15_11_1; // added for M1
         uint64_t apple_3_7_15_0_4;
         uint64_t apple_3_7_15_5_4;

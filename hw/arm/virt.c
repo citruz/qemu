@@ -727,13 +727,13 @@ static void create_gic(VirtMachineState *vms)
                                     qdev_get_gpio_in(vms->gic, ppibase
                                                      + VIRTUAL_PMU_IRQ));
 
-        sysbus_connect_irq(gicbusdev, i, qdev_get_gpio_in(cpudev, ARM_CPU_IRQ));
-        sysbus_connect_irq(gicbusdev, i + smp_cpus,
-                           qdev_get_gpio_in(cpudev, ARM_CPU_FIQ));
-        sysbus_connect_irq(gicbusdev, i + 2 * smp_cpus,
-                           qdev_get_gpio_in(cpudev, ARM_CPU_VIRQ));
-        sysbus_connect_irq(gicbusdev, i + 3 * smp_cpus,
-                           qdev_get_gpio_in(cpudev, ARM_CPU_VFIQ));
+        // sysbus_connect_irq(gicbusdev, i, qdev_get_gpio_in(cpudev, ARM_CPU_IRQ));
+        // sysbus_connect_irq(gicbusdev, i + smp_cpus,
+        //                    qdev_get_gpio_in(cpudev, ARM_CPU_FIQ));
+        // sysbus_connect_irq(gicbusdev, i + 2 * smp_cpus,
+        //                    qdev_get_gpio_in(cpudev, ARM_CPU_VIRQ));
+        // sysbus_connect_irq(gicbusdev, i + 3 * smp_cpus,
+        //                    qdev_get_gpio_in(cpudev, ARM_CPU_VFIQ));
 
         // zhuowei: hack: also wire timer to FIQ to match t8015
         qdev_connect_gpio_out(cpudev, GTIMER_PHYS, qdev_get_gpio_in(cpudev, ARM_CPU_FIQ));
@@ -2003,7 +2003,7 @@ static void machvirt_init(MachineState *machine)
 
     fdt_add_pmu_nodes(vms);
 
-    //create_uart(vms, VIRT_UART, sysmem, serial_hd(0));
+    // create_uart(vms, VIRT_UART, sysmem, serial_hd(0));
 
     // if (vms->secure) {
     //     create_secure_ram(vms, secure_sysmem, secure_tag_sysmem);
