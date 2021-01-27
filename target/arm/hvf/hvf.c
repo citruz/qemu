@@ -29,7 +29,7 @@
 #include "target/arm/cpu.h"
 #include "target/arm/internals.h"
 
-#define HVF_DEBUG 0
+#define HVF_DEBUG 1
 #define DPRINTF(...)                                        \
     if (HVF_DEBUG) {                                        \
         fprintf(stderr, "HVF %s:%d ", __func__, __LINE__);  \
@@ -507,6 +507,27 @@ static uint32_t hvf_reg2cp_reg(uint32_t reg)
                               (reg >> 17) & 0x7);
 }
 
+
+static void my_cpu_dump_state(CPUState *cpu) {
+    ARMCPU *arm_cpu = ARM_CPU(cpu);
+    CPUARMState *env = &arm_cpu->env;
+
+    for (int i = HV_SIMD_FP_REG_Q0; i < 32; i++) {
+        hv_simd_fp_uchar16_t neon_reg;
+        uint64_t high, low;
+        hv_return_t r = hv_vcpu_get_simd_fp_reg(cpu->hvf->fd, i, &neon_reg);
+        assert_hvf_ok(r);
+
+        low = neon_reg[0] | neon_reg[1] << 8 | neon_reg[2] << 16 | neon_reg[3] << 24 | (uint64_t)neon_reg[4] << 32 | (uint64_t)neon_reg[5] << 40 | (uint64_t)neon_reg[6] << 48 | (uint64_t)neon_reg[7] << 56;
+        high = neon_reg[8] | neon_reg[9] << 8 | neon_reg[10] << 16 | neon_reg[11] << 24 | (uint64_t)neon_reg[12] << 32 | (uint64_t)neon_reg[13] << 40 | (uint64_t)neon_reg[14] << 48 | (uint64_t)neon_reg[15] << 56;
+        printf("q%02d=0x%016llx %016llx\n", i, high, low);
+    }
+
+    for (int i = 0; i < 4; i++) { 
+        printf("far_el[%d]=%#018llx\n", i, env->cp15.far_el[i]);
+    }
+}
+
 static uint64_t hvf_sysreg_read_cp(CPUState *cpu, uint32_t reg)
 {
     ARMCPU *arm_cpu = ARM_CPU(cpu);
@@ -525,22 +546,10 @@ static uint64_t hvf_sysreg_read_cp(CPUState *cpu, uint32_t reg)
         }
         DPRINTF("vgic read from %s [val=%016llx]", ri->name, val);
     } else if (reg == SYSREG_MAGIC_PPL) {
-        uint64_t op = env->xregs[15];
-
-        DPRINTF("PPL hook op=%#llx", op);
-        switch (op) {
-            case PMAP_ENTER_OPTIONS:
-                // dunno
-                break;
-            case PMAP_AUTH_USER_PTR:
-                printf("PMAP_AUTH_USER_PTR ptr=%#llx\n", env->xregs[0]);
-                env->xregs[0] &= 0xFFFFFFFFFFFF;
-                cpu->vcpu_dirty = true;
-            default:
-                printf("unhandled PPL op: %#llx\n", op);
-                cpu_dump_state(cpu, stderr, 0);
-                exit(1);
-        }
+        printf("SYSREG_MAGIC_PPL\n");
+        cpu_dump_state(cpu, stderr, 0);
+        my_cpu_dump_state(cpu);
+        exit(1);
     } else {
 
         printf("unhandled sysreg read @ %#llx %08x (op0=%d op1=%d op2=%d "
@@ -554,21 +563,6 @@ static uint64_t hvf_sysreg_read_cp(CPUState *cpu, uint32_t reg)
     return val;
 }
 
-static void my_cpu_dump_state(CPUState *cpu) {
-    ARMCPU *arm_cpu = ARM_CPU(cpu);
-    CPUARMState *env = &arm_cpu->env;
-
-    hvf_get_registers(cpu);
-
-    printf("DUMP STATE pc=0x%016llx\n", env->pc);
-
-    for (int i = 0; i < 31; i++) {
-        printf("x%d: 0x%016llx ", i, env->xregs[i]);
-        if (i && i % 3 == 0) {
-            printf("\n");
-        }
-    }
-}
 
 static uint64_t hvf_sysreg_read(CPUState *cpu, uint32_t reg)
 {
@@ -613,7 +607,7 @@ static uint64_t hvf_sysreg_read(CPUState *cpu, uint32_t reg)
     case SYSREG_ICC_SGI1R_EL1:
     case SYSREG_ICC_SRE_EL1:
         val = hvf_sysreg_read_cp(cpu, reg);
-        if (print) DPRINTF("read SYSREG_APPLE_UNKN_TIMER val = %#llx\n", val);
+        if (print) printf("read SYSREG_APPLE_UNKN_TIMER val = %#llx\n", val);
         break;
     case SYSREG_ICC_CTLR_EL1:
         val = hvf_sysreg_read_cp(cpu, reg);
@@ -700,7 +694,7 @@ static void hvf_sysreg_write(CPUState *cpu, uint32_t reg, uint64_t val)
         break;
     case SYSREG_ICC_EOIR0_EL1:
     case SYSREG_ICC_EOIR1_EL1:
-        DPRINTF("Wrote EOIR");
+        printf("Wrote EOIR");
         hvf_sysreg_write_cp(cpu, reg, val);
         qemu_set_irq(arm_cpu->gt_timer_outputs[GTIMER_VIRT], 0);
         hv_vcpu_set_vtimer_mask(cpu->hvf->fd, false);
@@ -713,13 +707,13 @@ static void hvf_sysreg_write(CPUState *cpu, uint32_t reg, uint64_t val)
 
 static int hvf_inject_interrupts(CPUState *cpu)
 {
-    if (cpu->interrupt_request & CPU_INTERRUPT_FIQ) {
-        //printf("injecting FIQ\n");
+    if (cpu->interrupt_request & CPU_INTERRUPT_FIQ && qemu_clock_get_ns(QEMU_CLOCK_VIRTUAL) > 0x12d34f688) {
+        printf("injecting FIQ\n");
         hv_vcpu_set_pending_interrupt(cpu->hvf->fd, HV_INTERRUPT_TYPE_FIQ, true);
     }
 
     if (cpu->interrupt_request & CPU_INTERRUPT_HARD) {
-        //printf("injecting IRQ");
+        printf("injecting IRQ");
         hv_vcpu_set_pending_interrupt(cpu->hvf->fd, HV_INTERRUPT_TYPE_IRQ, true);
     }
 
@@ -778,7 +772,7 @@ int hvf_vcpu_exec(CPUState *cpu)
             /* This is the main one, handle below. */
             break;
         case HV_EXIT_REASON_VTIMER_ACTIVATED:
-            DPRINTF("HV_EXIT_REASON_VTIMER_ACTIVATED\n");
+            printf("HV_EXIT_REASON_VTIMER_ACTIVATED pc=0x%llx clk=%#llx\n", env->pc, qemu_clock_get_ns(QEMU_CLOCK_VIRTUAL));
             qemu_set_irq(arm_cpu->gt_timer_outputs[GTIMER_VIRT], 1);
             continue;
         case HV_EXIT_REASON_CANCELED:
@@ -790,6 +784,23 @@ int hvf_vcpu_exec(CPUState *cpu)
         }
 
         DPRINTF("VM Exit: ec=%d pc=0x%llx", ec, env->pc);
+
+        // check for timer
+        {
+            uint64_t ctl;
+            bool timer_active;
+
+            r = hv_vcpu_get_sys_reg(cpu->hvf->fd, HV_SYS_REG_CNTV_CTL_EL0,
+                                    &ctl);
+            assert_hvf_ok(r);
+
+            printf("ctl=%llx\n", ctl);
+            timer_active = !!(ctl & (1 << 2));
+
+            if (timer_active != (cpu->interrupt_request & CPU_INTERRUPT_FIQ)) {
+                qemu_set_irq(arm_cpu->gt_timer_outputs[GTIMER_VIRT], timer_active);
+            }
+        }
 
         switch (ec) {
         case EC_DATAABORT: {
@@ -911,7 +922,7 @@ int hvf_vcpu_exec(CPUState *cpu)
             if (arm_is_psci_call(arm_cpu, EXCP_HVC)) {
                 arm_handle_psci_call(arm_cpu);
             } else {
-                DPRINTF("unknown HVC! %016llx", env->xregs[0]);
+                printf("unknown HVC! %016llx", env->xregs[0]);
                 env->xregs[0] = -1;
                 exit(1);
             }
@@ -921,7 +932,7 @@ int hvf_vcpu_exec(CPUState *cpu)
             if (arm_is_psci_call(arm_cpu, EXCP_SMC)) {
                 arm_handle_psci_call(arm_cpu);
             } else {
-                DPRINTF("unknown SMC! %016llx", env->xregs[0]);
+                printf("unknown SMC! %016llx", env->xregs[0]);
                 env->xregs[0] = -1;
                 exit(1);
             }
