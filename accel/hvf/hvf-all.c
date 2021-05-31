@@ -52,3 +52,79 @@ void assert_hvf_ok(hv_return_t ret)
 
     abort();
 }
+
+static const uint32_t brk_insn = 0xd4200000;
+
+int hvf_insert_breakpoint(CPUState *cpu, target_ulong addr,
+                          target_ulong len, int type)
+{
+    struct hvf_sw_breakpoint *bp;
+    int err;
+    uint32_t saved_insn;
+
+    printf("%s type=%d addr=%#llx len=%d\n", __func__, type, addr, len);
+
+    cpu->hvf->enable_debug = true;
+
+    if (cpu_memory_rw_debug(cpu, addr, (uint8_t *)&saved_insn, 4, 0) ||
+        cpu_memory_rw_debug(cpu, addr, (uint8_t *)&brk_insn, 4, 1)) {
+        return -EINVAL;
+    }
+    printf("saved_insn: %#x\n", saved_insn);
+/*
+    if (type == GDB_BREAKPOINT_SW) {
+        bp = kvm_find_sw_breakpoint(cpu, addr);
+        if (bp) {
+            bp->use_count++;
+            return 0;
+        }
+
+        bp = g_malloc(sizeof(struct kvm_sw_breakpoint));
+        bp->pc = addr;
+        bp->use_count = 1;
+        err = kvm_arch_insert_sw_breakpoint(cpu, bp);
+        if (err) {
+            g_free(bp);
+            return err;
+        }
+
+        QTAILQ_INSERT_HEAD(&cpu->kvm_state->kvm_sw_breakpoints, bp, entry);
+    } else {
+        err = kvm_arch_insert_hw_breakpoint(addr, len, type);
+        if (err) {
+            return err;
+        }
+    }
+
+    CPU_FOREACH(cpu) {
+        err = kvm_update_guest_debug(cpu, 0);
+        if (err) {
+            return err;
+        }
+    }*/
+    return 0;
+}
+
+
+int hvf_remove_breakpoint(CPUState *cpu, target_ulong addr,
+                          target_ulong len, int type)
+{
+    uint32_t saved_insn = 0xeb05009f;
+
+    printf("%s type=%d addr=%#llx len=%d\n", __func__, type, addr, len);
+
+    if (cpu_memory_rw_debug(cpu, addr, (uint8_t *)&saved_insn, 4, 1)) {
+        return -EINVAL;
+    }
+    return 0;
+}
+
+int hvf_update_guest_debug(CPUState *cpu)
+{
+    printf("%s tid=%p\n", __func__, pthread_self());
+
+    hvf_arch_update_guest_debug(cpu);
+
+    //return data.err;
+    return 0;
+}

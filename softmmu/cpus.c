@@ -442,6 +442,7 @@ void cpus_kick_thread(CPUState *cpu)
 
 void qemu_cpu_kick(CPUState *cpu)
 {
+    printf("%s cpu->stop=%d cpu->stopped=%d tid=%p\n", __func__, cpu->stop, cpu->stopped, pthread_self());
     qemu_cond_broadcast(cpu->halt_cond);
     if (cpus_accel->kick_vcpu_thread) {
         cpus_accel->kick_vcpu_thread(cpu);

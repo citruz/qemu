@@ -493,8 +493,11 @@ int hvf_arch_init_vcpu(CPUState *cpu)
 
 void hvf_kick_vcpu_thread(CPUState *cpu)
 {
+    printf("%s tid=%p\n", __func__, pthread_self());
     cpus_kick_thread(cpu);
-    hv_vcpus_exit(&cpu->hvf->fd, 1);
+    if(cpu->stop) {
+        hv_vcpus_exit(&cpu->hvf->fd, 1);
+    }
 }
 
 static uint32_t hvf_reg2cp_reg(uint32_t reg)
@@ -568,7 +571,6 @@ static uint64_t hvf_sysreg_read(CPUState *cpu, uint32_t reg)
 {
     ARMCPU *arm_cpu = ARM_CPU(cpu);
     uint64_t val = 0;
-    bool print = false;
 
     switch (reg) {
     case SYSREG_CNTPCT_EL0:
@@ -581,7 +583,6 @@ static uint64_t hvf_sysreg_read(CPUState *cpu, uint32_t reg)
         DPRINTF("read SYSREG_PMCCNTR_EL0 val = %#llx\n", val);
         break;
     case SYSREG_APPLE_UNKN_TIMER:
-        print = true;
     case SYSREG_ICC_AP0R0_EL1:
     case SYSREG_ICC_AP0R1_EL1:
     case SYSREG_ICC_AP0R2_EL1:
@@ -607,7 +608,6 @@ static uint64_t hvf_sysreg_read(CPUState *cpu, uint32_t reg)
     case SYSREG_ICC_SGI1R_EL1:
     case SYSREG_ICC_SRE_EL1:
         val = hvf_sysreg_read_cp(cpu, reg);
-        if (print) printf("read SYSREG_APPLE_UNKN_TIMER val = %#llx\n", val);
         break;
     case SYSREG_ICC_CTLR_EL1:
         val = hvf_sysreg_read_cp(cpu, reg);
@@ -659,13 +659,11 @@ static void hvf_sysreg_write_cp(CPUState *cpu, uint32_t reg, uint64_t val)
 static void hvf_sysreg_write(CPUState *cpu, uint32_t reg, uint64_t val)
 {
     ARMCPU *arm_cpu = ARM_CPU(cpu);
-    bool print = false;
 
     switch (reg) {
     case SYSREG_CNTPCT_EL0:
         break;
     case SYSREG_APPLE_UNKN_TIMER:
-        print = true;
     case SYSREG_ICC_AP0R0_EL1:
     case SYSREG_ICC_AP0R1_EL1:
     case SYSREG_ICC_AP0R2_EL1:
@@ -690,7 +688,6 @@ static void hvf_sysreg_write(CPUState *cpu, uint32_t reg, uint64_t val)
     case SYSREG_ICC_SGI1R_EL1:
     case SYSREG_ICC_SRE_EL1:
         hvf_sysreg_write_cp(cpu, reg, val);
-        if (print) DPRINTF("write SYSREG_APPLE_UNKN_TIMER val = %#llx\n", val);
         break;
     case SYSREG_ICC_EOIR0_EL1:
     case SYSREG_ICC_EOIR1_EL1:
@@ -733,6 +730,8 @@ static void hvf_wait_for_ipi(CPUState *cpu, struct timespec *ts)
     qemu_mutex_lock_iothread();
 }
 
+static void hvf_invoke_set_guest_debug(CPUState *cpu, run_on_cpu_data data);
+
 int hvf_vcpu_exec(CPUState *cpu)
 {
     ARMCPU *arm_cpu = ARM_CPU(cpu);
@@ -757,9 +756,27 @@ int hvf_vcpu_exec(CPUState *cpu)
         }
 
         qemu_mutex_unlock_iothread();
-        assert_hvf_ok(hv_vcpu_run(cpu->hvf->fd));
+        printf(">> running vcpu\n");
+        hvf_invoke_set_guest_debug(cpu, RUN_ON_CPU_NULL);
 
-        hvf_get_registers(cpu);
+        {
+            uint64_t mdscr = -1, spsr = -1, elr = -1;
+
+            r = hv_vcpu_get_sys_reg(cpu->hvf->fd, HV_SYS_REG_SPSR_EL1, &spsr);
+            assert_hvf_ok(r);
+
+            r = hv_vcpu_get_sys_reg(cpu->hvf->fd, HV_SYS_REG_MDSCR_EL1, &mdscr);
+            assert_hvf_ok(r);
+
+            r = hv_vcpu_get_sys_reg(cpu->hvf->fd, HV_SYS_REG_ELR_EL1, &elr);
+            assert_hvf_ok(r);
+
+            printf(" SPSR_EL1=%#llx MDSCR_EL1=%#llx ELR_EL1=%#llx\n", spsr, mdscr, elr);
+            cpu_dump_state(cpu, stderr, 0);
+
+        }
+
+        assert_hvf_ok(hv_vcpu_run(cpu->hvf->fd));
 
         /* handle VMEXIT */
         uint64_t exit_reason = hvf_exit->reason;
@@ -767,23 +784,42 @@ int hvf_vcpu_exec(CPUState *cpu)
         uint32_t ec = syn_get_ec(syndrome);
 
         qemu_mutex_lock_iothread();
+    
+        cpu_synchronize_state(cpu);
+        DPRINTF("VM Exit: exit_reason=%#llx ec=%#x pc=0x%llx", exit_reason, ec, env->pc);
+        {
+            uint64_t mdscr = -1, spsr = -1, elr = -1;
+
+            r = hv_vcpu_get_sys_reg(cpu->hvf->fd, HV_SYS_REG_SPSR_EL1, &spsr);
+            assert_hvf_ok(r);
+
+            r = hv_vcpu_get_sys_reg(cpu->hvf->fd, HV_SYS_REG_MDSCR_EL1, &mdscr);
+            assert_hvf_ok(r);
+
+            r = hv_vcpu_get_sys_reg(cpu->hvf->fd, HV_SYS_REG_ELR_EL1, &elr);
+            assert_hvf_ok(r);
+
+            printf(" SPSR_EL1=%#llx MDSCR_EL1=%#llx ELR_EL1=%#llx\n", spsr, mdscr, elr);
+            cpu_dump_state(cpu, stderr, 0);
+
+        }
+
         switch (exit_reason) {
         case HV_EXIT_REASON_EXCEPTION:
             /* This is the main one, handle below. */
             break;
         case HV_EXIT_REASON_VTIMER_ACTIVATED:
-            printf("HV_EXIT_REASON_VTIMER_ACTIVATED pc=0x%llx clk=%#llx\n", env->pc, qemu_clock_get_ns(QEMU_CLOCK_VIRTUAL));
+            DPRINTF("HV_EXIT_REASON_VTIMER_ACTIVATED pc=0x%llx clk=%#llx\n", env->pc, qemu_clock_get_ns(QEMU_CLOCK_VIRTUAL));
             qemu_set_irq(arm_cpu->gt_timer_outputs[GTIMER_VIRT], 1);
             continue;
         case HV_EXIT_REASON_CANCELED:
             /* we got kicked, no exit to process */
-            continue;
+            //hvf_invoke_set_guest_debug(cpu, RUN_ON_CPU_NULL);
+            return 0;
         default:
             printf("unhandled exit reason %llu\n", exit_reason);
             assert(0);
         }
-
-        DPRINTF("VM Exit: ec=%d pc=0x%llx", ec, env->pc);
 
         // check for timer
         {
@@ -794,7 +830,6 @@ int hvf_vcpu_exec(CPUState *cpu)
                                     &ctl);
             assert_hvf_ok(r);
 
-            printf("ctl=%llx\n", ctl);
             timer_active = !!(ctl & (1 << 2));
 
             if (timer_active != (cpu->interrupt_request & CPU_INTERRUPT_FIQ)) {
@@ -938,6 +973,29 @@ int hvf_vcpu_exec(CPUState *cpu)
             }
             env->pc += 4;
             break;
+        case EC_SOFTWARESTEP:
+            cpu_synchronize_state(cpu);
+            DPRINTF("exit: EC_SOFTWARESTEP [ec=0x%x pc=0x%llx pstate.ss=%d]", ec, env->pc, env->pstate & PSTATE_SS);
+
+            //env->pc += 4; // not sure
+            {
+                uint64_t pc;
+
+                flush_cpu_state(cpu);
+
+                r = hv_vcpu_get_reg(cpu->hvf->fd, HV_REG_PC, &pc);
+                assert_hvf_ok(r);
+                pc += 4;
+                r = hv_vcpu_set_reg(cpu->hvf->fd, HV_REG_PC, pc);
+                assert_hvf_ok(r);
+            }
+            return EXCP_DEBUG;
+        case EC_AA64_BKPT:
+            cpu_synchronize_state(cpu);
+            DPRINTF("exit: EC_AA64_BKPT [ec=0x%x pc=0x%llx]", ec, env->pc);
+
+            return EXCP_DEBUG;
+
         default:
             cpu_synchronize_state(cpu);
             DPRINTF("exit: %llx [ec=0x%x pc=0x%llx]", syndrome, ec, env->pc);
@@ -958,3 +1016,65 @@ int hvf_vcpu_exec(CPUState *cpu)
         }
     }
 }
+
+static void hvf_invoke_set_guest_debug(CPUState *cpu, run_on_cpu_data data)
+{
+    printf("%s cpu->singlestep_enabled=%d hvf->enable_debug=%d tid=%p\n", __func__, cpu->singlestep_enabled, cpu->hvf->enable_debug,  pthread_self());
+    uint64_t mdscr;
+    hv_return_t r;
+
+    cpu->hvf->enable_debug = cpu->singlestep_enabled || cpu->hvf->enable_debug;
+
+    r = hv_vcpu_set_trap_debug_exceptions(cpu->hvf->fd, cpu->hvf->enable_debug);
+    assert_hvf_ok(r);
+
+
+    // breakpoints work fine with this
+    //return;
+
+    // set mdscr_el1.ss
+    r = hv_vcpu_get_sys_reg(cpu->hvf->fd, HV_SYS_REG_MDSCR_EL1, &mdscr);
+    assert_hvf_ok(r);
+
+    if (cpu->singlestep_enabled) {
+        mdscr |= (1 << 0);// | (1 << 13);
+    } else {
+        mdscr &= ~(1ULL << 0);
+    }
+
+    r = hv_vcpu_set_sys_reg(cpu->hvf->fd, HV_SYS_REG_MDSCR_EL1, mdscr);
+    assert_hvf_ok(r);
+    printf("%s mdscr=%#llx\n", __func__, mdscr);
+
+    
+    uint64_t spsr;
+    ARMCPU *arm_cpu = ARM_CPU(cpu);
+    CPUARMState *env = &arm_cpu->env;
+
+    // set spsr_el1.ss
+    r = hv_vcpu_get_sys_reg(cpu->hvf->fd, HV_SYS_REG_SPSR_EL1, &spsr);
+    assert_hvf_ok(r);
+    if (cpu->singlestep_enabled) {
+        spsr |= (1 << 21);
+    } else {
+        spsr &= ~(1ULL << 21);
+
+    }
+
+    r = hv_vcpu_set_sys_reg(cpu->hvf->fd, HV_SYS_REG_SPSR_EL1, spsr);
+    assert_hvf_ok(r);
+    printf("%s spsr=%#llx\n", __func__, spsr);
+
+    // set elr_el1 = pc
+    r = hv_vcpu_set_sys_reg(cpu->hvf->fd, HV_SYS_REG_ELR_EL1, env->pc);
+    assert_hvf_ok(r);
+    printf("%s elr_el1=%#llx\n", __func__, env->pc);
+}
+
+void hvf_arch_update_guest_debug(CPUState *cpu)
+{
+    printf("%s\n", __func__);
+    run_on_cpu(cpu, hvf_invoke_set_guest_debug, RUN_ON_CPU_NULL);
+
+}
+

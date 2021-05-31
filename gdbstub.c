@@ -1022,8 +1022,14 @@ static int gdb_breakpoint_insert(int type, target_ulong addr, target_ulong len)
     CPUState *cpu;
     int err = 0;
 
+    printf("%s\n", __func__);
+
     if (kvm_enabled()) {
         return kvm_insert_breakpoint(gdbserver_state.c_cpu, addr, len, type);
+    }
+
+    if (hvf_enabled()) {
+        return hvf_insert_breakpoint(gdbserver_state.c_cpu, addr, len, type);
     }
 
     switch (type) {
@@ -1061,6 +1067,10 @@ static int gdb_breakpoint_remove(int type, target_ulong addr, target_ulong len)
 
     if (kvm_enabled()) {
         return kvm_remove_breakpoint(gdbserver_state.c_cpu, addr, len, type);
+    }
+
+    if (hvf_enabled()) {
+        return hvf_remove_breakpoint(gdbserver_state.c_cpu, addr, len, type);
     }
 
     switch (type) {

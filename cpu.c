@@ -33,6 +33,7 @@
 #endif
 #include "sysemu/tcg.h"
 #include "sysemu/kvm.h"
+#include "sysemu/hvf.h"
 #include "sysemu/replay.h"
 #include "translate-all.h"
 #include "exec/log.h"
@@ -338,10 +339,13 @@ void cpu_breakpoint_remove_all(CPUState *cpu, int mask)
    CPU loop after each instruction */
 void cpu_single_step(CPUState *cpu, int enabled)
 {
+    printf("%s enabled=%d tid=%p\n", __func__, enabled, pthread_self());
     if (cpu->singlestep_enabled != enabled) {
         cpu->singlestep_enabled = enabled;
         if (kvm_enabled()) {
             kvm_update_guest_debug(cpu, 0);
+        } else if (hvf_enabled()) {
+            hvf_update_guest_debug(cpu);
         } else {
             /* must flush all the translated code to avoid inconsistencies */
             /* XXX: only flush what is necessary */
