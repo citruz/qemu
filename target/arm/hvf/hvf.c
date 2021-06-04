@@ -582,6 +582,7 @@ static void hvf_raise_exception(CPUARMState *env, uint32_t excp,
     pstate_write(env, PSTATE_DAIF | new_mode);
     aarch64_restore_sp(env, new_el);
     env->pc = addr;
+}
 
 static uint32_t hvf_reg2cp_reg(uint32_t reg)
 {
@@ -831,6 +832,7 @@ static void hvf_sysreg_write(CPUState *cpu, uint32_t reg, uint64_t val)
         hvf_sysreg_write_cp(cpu, reg, val);
         qemu_set_irq(arm_cpu->gt_timer_outputs[GTIMER_VIRT], 0);
         hv_vcpu_set_vtimer_mask(cpu->hvf->fd, false);
+        break;
     default:
         trace_hvf_unhandled_sysreg_write(reg,
                                          (reg >> 20) & 0x3,
@@ -876,6 +878,8 @@ static void hvf_wfi(CPUState *cpu)
     ARMCPU *arm_cpu = ARM_CPU(cpu);
     hv_return_t r;
     uint64_t ctl;
+
+    printf("%s\n", __func__);
 
     if (cpu->interrupt_request & (CPU_INTERRUPT_HARD | CPU_INTERRUPT_FIQ)) {
         /* Interrupt pending, no need to wait */
