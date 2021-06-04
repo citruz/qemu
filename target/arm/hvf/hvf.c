@@ -799,6 +799,8 @@ static void hvf_sysreg_write_cp(CPUState *cpu, uint32_t reg, uint64_t val)
 
 static void hvf_sysreg_write(CPUState *cpu, uint32_t reg, uint64_t val)
 {
+    ARMCPU *arm_cpu = ARM_CPU(cpu);
+
     switch (reg) {
     case SYSREG_CNTPCT_EL0:
         break;
