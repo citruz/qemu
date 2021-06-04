@@ -1067,8 +1067,23 @@ int hvf_vcpu_exec(CPUState *cpu)
     case EC_AA64_HVC:
         cpu_synchronize_state(cpu);
         if (hvf_handle_psci_call(cpu)) {
-            trace_hvf_unknown_hvf(env->xregs[0]);
-            hvf_raise_exception(env, EXCP_UDEF, syn_uncategorized());
+            if ((env->xregs[0] & 0xC1000000) == 0xC1000000) {
+                // CPU service call
+                uint32_t function_num = env->xregs[0] & 0xFFFF;
+                printf("%s: CPU service call #%u pc=0x%llx\n", __func__, function_num, env->pc);
+
+                switch (function_num) {
+                    case 1: // get rop and jop pid
+                        env->xregs[2] = 0;
+                        env->xregs[3] = 0;
+                        break;
+                    default:
+                        printf("unhandled\n");
+                }
+            } else {
+                trace_hvf_unknown_hvf(env->xregs[0]);
+                hvf_raise_exception(env, EXCP_UDEF, syn_uncategorized());
+            }
         }
         break;
     case EC_AA64_SMC:
