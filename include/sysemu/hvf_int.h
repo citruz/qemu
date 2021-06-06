@@ -52,6 +52,7 @@ struct hvf_vcpu_state {
     void *exit;
     bool vtimer_masked;
     sigset_t unblock_ipi_mask;
+    bool enable_debug;
 };
 
 void assert_hvf_ok(hv_return_t ret);

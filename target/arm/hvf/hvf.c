@@ -952,6 +952,10 @@ static void hvf_sync_vtimer(CPUState *cpu)
     }
 }
 
+static void hvf_invoke_set_guest_debug(CPUState *cpu, run_on_cpu_data data);
+
+static uint64_t exit_timestamp = 0;
+
 int hvf_vcpu_exec(CPUState *cpu)
 {
     ARMCPU *arm_cpu = ARM_CPU(cpu);
@@ -959,6 +963,7 @@ int hvf_vcpu_exec(CPUState *cpu)
     hv_vcpu_exit_t *hvf_exit = cpu->hvf->exit;
     hv_return_t r;
     bool advance_pc = false;
+    int res = 0;
 
     flush_cpu_state(cpu);
 
@@ -974,9 +979,23 @@ int hvf_vcpu_exec(CPUState *cpu)
         return EXCP_HLT;
     }
 
+    hvf_invoke_set_guest_debug(cpu, RUN_ON_CPU_NULL);
+
+    if (exit_timestamp != 0) {
+        uint64_t time_passed = mach_absolute_time() - exit_timestamp;
+        uint64_t vtimer_offset;
+
+        // adjust vtimer offset for the ticks we spent on host
+        assert_hvf_ok(hv_vcpu_get_vtimer_offset(cpu->hvf->fd, &vtimer_offset));
+        vtimer_offset += time_passed;
+        assert_hvf_ok(hv_vcpu_set_vtimer_offset(cpu->hvf->fd, vtimer_offset));
+    }
+
+
     qemu_mutex_unlock_iothread();
     assert_hvf_ok(hv_vcpu_run(cpu->hvf->fd));
 
+    exit_timestamp = mach_absolute_time();
     /* handle VMEXIT */
     uint64_t exit_reason = hvf_exit->reason;
     uint64_t syndrome = hvf_exit->exception.syndrome;
@@ -1101,6 +1120,17 @@ int hvf_vcpu_exec(CPUState *cpu)
             hvf_raise_exception(env, EXCP_UDEF, syn_uncategorized());
         }
         break;
+    case EC_SOFTWARESTEP:
+        cpu_synchronize_state(cpu);
+        printf("exit: EC_SOFTWARESTEP [pc=0x%llx]\n", env->pc);
+        res = EXCP_DEBUG;
+        break;
+    case EC_AA64_BKPT:
+        cpu_synchronize_state(cpu);
+        printf("exit: EC_AA64_BKPT [pc=0x%llx]", env->pc);
+
+        res = EXCP_DEBUG;
+        break;
     default:
         cpu_synchronize_state(cpu);
         trace_hvf_exit(syndrome, ec, env->pc);
@@ -1119,5 +1149,42 @@ int hvf_vcpu_exec(CPUState *cpu)
         assert_hvf_ok(r);
     }
 
-    return 0;
+    return res;
+}
+
+static void hvf_invoke_set_guest_debug(CPUState *cpu, run_on_cpu_data data)
+{
+    //printf("%s cpu->singlestep_enabled=%d hvf->enable_debug=%d tid=%p\n", __func__, cpu->singlestep_enabled, cpu->hvf->enable_debug,  pthread_self());
+    uint64_t mdscr;
+
+    cpu->hvf->enable_debug = cpu->singlestep_enabled || cpu->hvf->enable_debug;
+
+    assert_hvf_ok(hv_vcpu_set_trap_debug_exceptions(cpu->hvf->fd, cpu->hvf->enable_debug));
+
+    // set mdscr_el1.ss
+    assert_hvf_ok(hv_vcpu_get_sys_reg(cpu->hvf->fd, HV_SYS_REG_MDSCR_EL1, &mdscr));
+
+    if (cpu->singlestep_enabled) {
+        mdscr |= (1 << 0);
+    } else {
+        mdscr &= ~(1ULL << 0);
+    }
+
+    assert_hvf_ok(hv_vcpu_set_sys_reg(cpu->hvf->fd, HV_SYS_REG_MDSCR_EL1, mdscr));
+
+    // set cpsr.ss
+    uint64_t cpsr;
+    assert_hvf_ok(hv_vcpu_get_reg(cpu->hvf->fd, HV_REG_CPSR, &cpsr));
+    if (cpu->singlestep_enabled) {
+        cpsr |= (PSTATE_SS);
+    } else {
+        cpsr &= ~(PSTATE_SS);
+    }
+    assert_hvf_ok(hv_vcpu_set_reg(cpu->hvf->fd, HV_REG_CPSR, cpsr));
+}
+
+void hvf_arch_update_guest_debug(CPUState *cpu)
+{
+    run_on_cpu(cpu, hvf_invoke_set_guest_debug, RUN_ON_CPU_NULL);
+
 }
