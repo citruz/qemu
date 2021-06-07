@@ -1099,15 +1099,29 @@ int hvf_vcpu_exec(CPUState *cpu)
             if ((env->xregs[0] & 0xC1000000) == 0xC1000000) {
                 // CPU service call
                 uint32_t function_num = env->xregs[0] & 0xFFFF;
-                printf("%s: CPU service call #%u pc=0x%llx\n", __func__, function_num, env->pc);
 
                 switch (function_num) {
-                    case 1: // get rop and jop pid
+                    case 0:
+                        // this is called right after vbar_el1 is set
+                        // not sure why, no return value is expected
+                        break;
+                    case 1:
+                        // get rop and jop pid
                         env->xregs[2] = 0;
                         env->xregs[3] = 0;
                         break;
+                    case 3:
+                        // this is called as part of machine_switch_context, maybe to inform hyp of new rop key
+                        // x1 contains a rop key
+                        // no return value seems to be expected
+                        break;
+                    case 5:
+                        // called with
+                        //  x1 = 0 or 1
+                        //  x2 = <jop pid>
+                        break;
                     default:
-                        printf("unhandled\n");
+                    printf("%s: unhandled CPU service call #%u pc=0x%llx\n", __func__, function_num, env->pc);
                 }
             } else {
                 trace_hvf_unknown_hvf(env->xregs[0]);
