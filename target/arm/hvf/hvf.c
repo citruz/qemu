@@ -39,7 +39,9 @@
     ((op0 << 20) | (op2 << 17) | (op1 << 14) | (crn << 10) | (crm << 1))
 #define SYSREG_MASK           SYSREG(0x3, 0x7, 0xf, 0xf, 0x7)
 #define SYSREG_CNTPCT_EL0     SYSREG(3, 3, 14, 0, 1)
+#define SYSREG_CNTP_CTL_EL0   SYSREG(3, 3, 14, 2, 1)
 #define SYSREG_PMCCNTR_EL0    SYSREG(3, 3, 9, 13, 0)
+#define SYSREG_OSLAR_EL1      SYSREG(2, 0, 1, 0, 4)
 
 #define SYSREG_ICC_AP0R0_EL1     SYSREG(3, 0, 12, 8, 4)
 #define SYSREG_ICC_AP0R1_EL1     SYSREG(3, 0, 12, 8, 5)
@@ -805,6 +807,8 @@ static void hvf_sysreg_write(CPUState *cpu, uint32_t reg, uint64_t val)
 
     switch (reg) {
     case SYSREG_CNTPCT_EL0:
+    case SYSREG_CNTP_CTL_EL0:
+    case SYSREG_OSLAR_EL1:
         break;
     case SYSREG_ICC_AP0R0_EL1:
     case SYSREG_ICC_AP0R1_EL1:
