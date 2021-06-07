@@ -767,7 +767,9 @@ static uint64_t hvf_sysreg_read(CPUState *cpu, uint32_t reg)
         val |= 4 << ICC_CTLR_EL1_PRIBITS_SHIFT;
         break;
     default:
+        cpu_synchronize_state(cpu);
         trace_hvf_unhandled_sysreg_read(reg,
+                                        arm_cpu->env.pc,
                                         (reg >> 20) & 0x3,
                                         (reg >> 14) & 0x7,
                                         (reg >> 10) & 0xf,
@@ -836,7 +838,9 @@ static void hvf_sysreg_write(CPUState *cpu, uint32_t reg, uint64_t val)
         hv_vcpu_set_vtimer_mask(cpu->hvf->fd, false);
         break;
     default:
+        cpu_synchronize_state(cpu);
         trace_hvf_unhandled_sysreg_write(reg,
+                                         arm_cpu->env.pc,
                                          (reg >> 20) & 0x3,
                                          (reg >> 14) & 0x7,
                                          (reg >> 10) & 0xf,
